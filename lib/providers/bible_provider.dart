@@ -72,6 +72,22 @@ class BibleProvider with ChangeNotifier {
     await _dbService.deleteBibleVerse(id);
     _loadAnnotations();
   }
+  
+  Future<void> deleteBook(String bookName) async {
+    final versesToDelete = _savedVerses.where((v) => v.bookName == bookName).toList();
+    for (var v in versesToDelete) {
+      await _dbService.deleteBibleVerse(v.id);
+    }
+    _loadAnnotations();
+  }
+
+  Future<void> deleteChapter(String bookName, int chapterNumber) async {
+    final versesToDelete = _savedVerses.where((v) => v.bookName == bookName && v.chapterNumber == chapterNumber).toList();
+    for (var v in versesToDelete) {
+      await _dbService.deleteBibleVerse(v.id);
+    }
+    _loadAnnotations();
+  }
 
   Future<void> toggleFavorite(BibleVerse verse) async {
     final updated = verse.copyWith(isFavorite: !verse.isFavorite, updatedAt: DateTime.now());

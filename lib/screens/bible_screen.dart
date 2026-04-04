@@ -42,7 +42,34 @@ class BibleScreen extends StatelessWidget {
                   child: Text(bookName.isNotEmpty ? bookName[0].toUpperCase() : 'B', style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
                 title: Text(bookName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (val) async {
+                    if (val == 'delete') {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete Book'),
+                          content: const Text('Are you sure you want to completely delete this book and ALL its verses?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                            TextButton(
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && context.mounted) {
+                        Provider.of<BibleProvider>(context, listen: false).deleteBook(bookName);
+                      }
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'delete', child: Text('Delete Book', style: TextStyle(color: Colors.red))),
+                  ],
+                ),
                 onTap: () {
                   Navigator.push(
                     context,

@@ -42,6 +42,26 @@ class BibleChaptersScreen extends StatelessWidget {
                     ),
                   );
                 },
+                onLongPress: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete Chapter'),
+                      content: Text('Are you sure you want to permanently delete Chapter $chapterNumber and ALL verses inside it?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && context.mounted) {
+                    Provider.of<BibleProvider>(context, listen: false).deleteChapter(bookName, chapterNumber);
+                  }
+                },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   decoration: BoxDecoration(
