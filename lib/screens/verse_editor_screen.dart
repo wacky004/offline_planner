@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../models/saved_verse.dart';
+import '../models/bible_verse.dart';
 import '../providers/bible_provider.dart';
 
 class VerseEditorScreen extends StatefulWidget {
-  final SavedVerse? verseToEdit;
+  final BibleVerse? verseToEdit;
+  final String? prefilledBook;
+  final String? prefilledChapter;
 
-  const VerseEditorScreen({super.key, this.verseToEdit});
+  const VerseEditorScreen({
+    super.key,
+    this.verseToEdit,
+    this.prefilledBook,
+    this.prefilledChapter,
+  });
 
   @override
   State<VerseEditorScreen> createState() => _VerseEditorScreenState();
@@ -15,7 +22,7 @@ class VerseEditorScreen extends StatefulWidget {
 
 class _VerseEditorScreenState extends State<VerseEditorScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _bookController;
   late TextEditingController _chapterController;
   late TextEditingController _verseController;
@@ -27,10 +34,10 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _bookController = TextEditingController(text: widget.verseToEdit?.book ?? '');
-    _chapterController = TextEditingController(text: widget.verseToEdit?.chapter ?? '');
-    _verseController = TextEditingController(text: widget.verseToEdit?.verse ?? '');
-    _textController = TextEditingController(text: widget.verseToEdit?.text ?? '');
+    _bookController = TextEditingController(text: widget.verseToEdit?.bookName ?? widget.prefilledBook ?? '');
+    _chapterController = TextEditingController(text: widget.verseToEdit?.chapterNumber.toString() ?? widget.prefilledChapter ?? '');
+    _verseController = TextEditingController(text: widget.verseToEdit?.verseNumber.toString() ?? '');
+    _textController = TextEditingController(text: widget.verseToEdit?.verseText ?? '');
     _noteController = TextEditingController(text: widget.verseToEdit?.note ?? '');
     _isFavorite = widget.verseToEdit?.isFavorite ?? false;
   }
@@ -48,24 +55,21 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
   void _saveVerse() async {
     if (_formKey.currentState!.validate()) {
       final provider = Provider.of<BibleProvider>(context, listen: false);
-      
-      final verse = SavedVerse(
+
+      final verse = BibleVerse(
         id: widget.verseToEdit?.id ?? const Uuid().v4(),
-        book: _bookController.text.trim(),
-        chapter: _chapterController.text.trim(),
-        verse: _verseController.text.trim(),
-        text: _textController.text.trim(),
+        bookId: _bookController.text.trim().toLowerCase(),
+        bookName: _bookController.text.trim(),
+        chapterNumber: int.tryParse(_chapterController.text.trim()) ?? 1,
+        verseNumber: int.tryParse(_verseController.text.trim()) ?? 1,
+        verseText: _textController.text.trim(),
         note: _noteController.text.trim(),
         isFavorite: _isFavorite,
         createdAt: widget.verseToEdit?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      if (widget.verseToEdit == null) {
-        await provider.addVerse(verse);
-      } else {
-        await provider.updateVerse(verse);
-      }
+      await provider.saveAnnotation(verse);
 
       if (mounted) Navigator.pop(context);
     }
@@ -108,7 +112,7 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
                     flex: 2,
                     child: TextFormField(
                       controller: _bookController,
-                      decoration: const InputDecoration(labelText: 'Book', hintText: 'e.g. John', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Book Name', hintText: 'e.g. Genesis', border: OutlineInputBorder()),
                       validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                     ),
                   ),
@@ -116,7 +120,7 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _chapterController,
-                      decoration: const InputDecoration(labelText: 'Ch.', hintText: '3', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Ch.', hintText: '1', border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
                       validator: (val) => val == null || val.isEmpty ? '?' : null,
                     ),
@@ -125,8 +129,8 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _verseController,
-                      decoration: const InputDecoration(labelText: 'Verse', hintText: '16', border: OutlineInputBorder()),
-                      keyboardType: TextInputType.text,
+                      decoration: const InputDecoration(labelText: 'Verse', hintText: '1', border: OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
                       validator: (val) => val == null || val.isEmpty ? '?' : null,
                     ),
                   ),
@@ -137,19 +141,19 @@ class _VerseEditorScreenState extends State<VerseEditorScreen> {
                 controller: _textController,
                 decoration: const InputDecoration(
                   labelText: 'Verse Text',
-                  hintText: 'For God so loved the world...',
+                  hintText: 'In the beginning...',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 4,
-                validator: (val) => val == null || val.isEmpty ? 'Text is required' : null,
+                validator: (val) => val == null || val.isEmpty ? 'Text restricts empty lines' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _noteController,
                 decoration: const InputDecoration(
                   labelText: 'Reflection / Personal Notes',
-                  hintText: 'What does this verse mean to you?',
+                  hintText: 'Add context or sermon notes...',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),

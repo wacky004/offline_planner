@@ -1,116 +1,122 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/bible_book.dart';
-import '../models/bible_verse.dart';
 import '../providers/bible_provider.dart';
-import '../widgets/verse_action_bottom_sheet.dart';
+import 'verse_editor_screen.dart';
 
 class BibleVersesScreen extends StatelessWidget {
-  final BibleBook book;
+  final String bookName;
   final int chapterNumber;
 
   const BibleVersesScreen({
     super.key,
-    required this.book,
+    required this.bookName,
     required this.chapterNumber,
   });
+
+  void _confirmDelete(BuildContext context, BibleProvider provider, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Verse'),
+        content: const Text('Are you sure you want to permanently delete this verse?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      provider.removeAnnotation(id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${book.name} $chapterNumber'),
+        title: Text('$bookName $chapterNumber'),
       ),
       body: Consumer<BibleProvider>(
         builder: (context, provider, _) {
-          final rawVerses = provider.getRawVerses(book.id, chapterNumber);
+          final verses = provider.getVersesForChapter(bookName, chapterNumber);
 
-          if (rawVerses.isEmpty) {
-            return const Center(child: Text('Content coming soon.'));
+          if (verses.isEmpty) {
+            return const Center(child: Text('No verses in this chapter yet.'));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            itemCount: rawVerses.length,
+            itemCount: verses.length,
             itemBuilder: (context, index) {
-              final rawVerse = rawVerses[index];
-              final int vNum = rawVerse['verseNumber'];
-              final String vText = rawVerse['text'];
+              final verse = verses[index];
 
-              final annotation = provider.getAnnotation(book.id, chapterNumber, vNum);
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => VerseActionBottomSheet(
-                          book: book,
-                          chapterNumber: chapterNumber,
-                          verseNumber: vNum,
-                          verseText: vText,
-                          existingAnnotation: annotation,
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: RichText(
-                        text: TextSpan(
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
-                          children: [
-                            TextSpan(
-                              text: '$vNum ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                            TextSpan(text: vText),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (annotation != null && (annotation.isFavorite || annotation.note.isNotEmpty))
-                    Container(
-                      margin: const EdgeInsets.only(left: 20, right: 8, bottom: 16, top: 2),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          if (annotation.isFavorite)
-                            Row(
-                              children: [
-                                Icon(Icons.bookmark, size: 14, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 4),
-                                Text('Favorited', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          if (annotation.isFavorite && annotation.note.isNotEmpty)
-                            const SizedBox(height: 6),
-                          if (annotation.note.isNotEmpty)
-                            Text(annotation.note, style: const TextStyle(fontStyle: FontStyle.italic)),
+                          Text(
+                            'Verse ${verse.verseNumber}',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(verse.isFavorite ? Icons.bookmark : Icons.bookmark_border, size: 20, color: verse.isFavorite ? Theme.of(context).colorScheme.primary : null),
+                                onPressed: () => provider.toggleFavorite(verse),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              PopupMenuButton<String>(
+                                onSelected: (val) {
+                                  if (val == 'edit') {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => VerseEditorScreen(verseToEdit: verse)));
+                                  } else if (val == 'delete') {
+                                    _confirmDelete(context, provider, verse.id);
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(value: 'edit', child: Text('Edit Verse')),
+                                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                ],
+                              )
+                            ],
+                          )
                         ],
                       ),
-                    )
-                  else
-                    const SizedBox(height: 8),
-                ],
+                      const SizedBox(height: 8),
+                      Text(verse.verseText, style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
+                      if (verse.note.isNotEmpty) ...[
+                        const Divider(height: 24),
+                        Text(verse.note, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      ]
+                    ],
+                  ),
+                ),
               );
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => VerseEditorScreen(prefilledBook: bookName, prefilledChapter: chapterNumber.toString())),
+            );
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
