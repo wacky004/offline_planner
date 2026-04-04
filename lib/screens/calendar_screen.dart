@@ -18,8 +18,8 @@ class CalendarScreen extends StatelessWidget {
           return Column(
             children: [
               TableCalendar<Entry>(
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
+                firstDay: DateTime.utc(2000, 1, 1),
+                lastDay: DateTime.utc(2100, 12, 31),
                 focusedDay: provider.selectedDate,
                 availableCalendarFormats: const {
                   CalendarFormat.month: 'Month',
