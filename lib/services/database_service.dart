@@ -5,48 +5,48 @@ import '../models/goal.dart';
 import '../models/goal_adapter.dart';
 import '../models/recipe.dart';
 import '../models/recipe_adapter.dart';
-import '../models/saved_verse.dart';
-import '../models/saved_verse_adapter.dart';
+import '../models/bible_verse.dart';
+import '../models/bible_verse_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
   static const String _goalsBoxName = 'goalsBox';
   static const String _recipesBoxName = 'recipesBox';
-  static const String _savedVersesBoxName = 'savedVersesBox';
+  static const String _bibleVersesBoxName = 'bibleVersesBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
   late Box<Recipe> _recipesBox;
-  late Box<SavedVerse> _savedVersesBox;
+  late Box<BibleVerse> _bibleVersesBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
     Hive.registerAdapter(EntryAdapter());
     Hive.registerAdapter(GoalAdapter());
     Hive.registerAdapter(RecipeAdapter());
-    Hive.registerAdapter(SavedVerseAdapter());
+    Hive.registerAdapter(BibleVerseAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
     _recipesBox = await Hive.openBox<Recipe>(_recipesBoxName);
-    _savedVersesBox = await Hive.openBox<SavedVerse>(_savedVersesBoxName);
+    _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesBoxName);
   }
 
-  // --- Saved Verses --- //
-  List<SavedVerse> getAllSavedVerses() {
-    return _savedVersesBox.values.toList();
+  // --- Bible Verses Annotations --- //
+  List<BibleVerse> getAllBibleVerses() {
+    return _bibleVersesBox.values.toList();
   }
 
-  Future<void> addSavedVerse(SavedVerse verse) async {
-    await _savedVersesBox.put(verse.id, verse);
+  Future<void> addBibleVerse(BibleVerse verse) async {
+    await _bibleVersesBox.put(verse.id, verse);
   }
 
-  Future<void> updateSavedVerse(SavedVerse verse) async {
-    await _savedVersesBox.put(verse.id, verse);
+  Future<void> updateBibleVerse(BibleVerse verse) async {
+    await _bibleVersesBox.put(verse.id, verse);
   }
 
-  Future<void> deleteSavedVerse(String id) async {
-    await _savedVersesBox.delete(id);
+  Future<void> deleteBibleVerse(String id) async {
+    await _bibleVersesBox.delete(id);
   }
 
   // --- Entries --- //

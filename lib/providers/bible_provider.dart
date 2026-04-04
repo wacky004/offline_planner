@@ -1,66 +1,77 @@
-import 'package:flutter/foundation.dart';
-import '../models/saved_verse.dart';
+import 'dart:convert';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import '../models/bible_book.dart';
+import '../models/bible_verse.dart';
 import '../services/database_service.dart';
 
 class BibleProvider with ChangeNotifier {
   final DatabaseService _dbService;
 
-  List<SavedVerse> _verses = [];
-  String _searchQuery = '';
+  List<BibleBook> _books = [];
+  List<BibleVerse> _savedAnnotations = [];
+
+  bool _isLoading = true;
+  bool get isLoading => _isLoading;
 
   BibleProvider(this._dbService) {
-    _loadData();
+    _init();
   }
 
-  List<SavedVerse> get verses => _verses;
-  String get searchQuery => _searchQuery;
-
-  List<SavedVerse> get filteredVerses {
-    return _verses.where((v) {
-      final textMatches = v.text.toLowerCase().contains(_searchQuery.toLowerCase());
-      final bookMatches = v.book.toLowerCase().contains(_searchQuery.toLowerCase());
-      final noteMatches = v.note.toLowerCase().contains(_searchQuery.toLowerCase());
-      return textMatches || bookMatches || noteMatches;
-    }).toList();
-  }
-
-  void setSearchQuery(String query) {
-    _searchQuery = query;
+  Future<void> _init() async {
+    await _loadBibleAsset();
+    _loadAnnotations();
+    _isLoading = false;
     notifyListeners();
   }
 
-  void _loadData() {
-    _verses = _dbService.getAllSavedVerses();
-    _verses.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    notifyListeners();
-  }
-
-  Future<void> addVerse(SavedVerse verse) async {
-    await _dbService.addSavedVerse(verse);
-    _loadData();
-  }
-
-  Future<void> updateVerse(SavedVerse verse) async {
-    final updated = verse.copyWith(updatedAt: DateTime.now());
-    await _dbService.updateSavedVerse(updated);
-    _loadData();
-  }
-
-  Future<void> deleteVerse(String id) async {
+  Future<void> _loadBibleAsset() async {
     try {
-      _verses.removeWhere((v) => v.id == id);
-      notifyListeners();
+      final jsonString = await rootBundle.loadString('assets/bible_sample.json');
+      final Map<String, dynamic> data = jsonDecode(jsonString);
+      final List<dynamic> booksList = data['books'];
       
-      await _dbService.deleteSavedVerse(id);
-      _loadData();
+      _books = booksList.map((e) => BibleBook.fromJson(e)).toList();
     } catch (e) {
-      debugPrint('Error deleting verse: $e');
-      rethrow;
+      debugPrint('Error loading bible asset: $e');
     }
   }
 
-  Future<void> toggleFavorite(SavedVerse verse) async {
-    final updated = verse.copyWith(isFavorite: !verse.isFavorite);
-    await updateVerse(updated);
+  void _loadAnnotations() {
+    _savedAnnotations = _dbService.getAllBibleVerses();
+    notifyListeners();
+  }
+
+  List<BibleBook> get books => _books;
+
+  /// Retrieves purely the read-only JSON verses for the chapter
+  List<dynamic> getRawVerses(String bookId, int chapterNumber) {
+    try {
+      final book = _books.firstWhere((b) => b.id == bookId);
+      return book.getChapterVerses(chapterNumber);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Gets the Hive annotation if present
+  BibleVerse? getAnnotation(String bookId, int chapterNumber, int verseNumber) {
+    try {
+      return _savedAnnotations.firstWhere(
+        (v) => v.bookId == bookId && v.chapterNumber == chapterNumber && v.verseNumber == verseNumber,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveAnnotation(BibleVerse verse) async {
+    await _dbService.addBibleVerse(verse);
+    _loadAnnotations();
+  }
+
+  Future<void> removeAnnotation(String id) async {
+    await _dbService.deleteBibleVerse(id);
+    _loadAnnotations();
   }
 }

@@ -1,0 +1,67 @@
+{
+    "books": [
+        {
+            "id": "gen",
+            "name": "Genesis",
+            "abbreviation": "Gen",
+            "totalChapters": 2,
+            "chapters": [
+                {
+                    "chapterNumber": 1,
+                    "verses": [
+                        {
+                            "verseNumber": 1,
+                            "text": "In the beginning God created the heaven and the earth."
+                        },
+                        {
+                            "verseNumber": 2,
+                            "text": "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters."
+                        },
+                        {
+                            "verseNumber": 3,
+                            "text": "And God said, Let there be light: and there was light."
+                        }
+                    ]
+                },
+                {
+                    "chapterNumber": 2,
+                    "verses": [
+                        {
+                            "verseNumber": 1,
+                            "text": "Thus the heavens and the earth were finished, and all the host of them."
+                        },
+                        {
+                            "verseNumber": 2,
+                            "text": "And on the seventh day God ended his work which he had made; and he rested on the seventh day from all his work which he had made."
+                        },
+                        {
+                            "verseNumber": 3,
+                            "text": "And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "exo",
+            "name": "Exodus",
+            "abbreviation": "Exo",
+            "totalChapters": 1,
+            "chapters": [
+                {
+                    "chapterNumber": 1,
+                    "verses": [
+                        {
+                            "verseNumber": 1,
+                            "text": "Now these are the names of the children of Israel, which came into Egypt; every man and his household came with Jacob."
+                        },
+                        {
+                            "verseNumber": 2,
+                            "text": "Reuben, Simeon, Levi, and Judah,"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
