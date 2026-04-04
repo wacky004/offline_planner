@@ -56,6 +56,11 @@ class BibleProvider with ChangeNotifier {
     _loadAll();
   }
 
+  Future<void> updateChapter(BibleChapter chapter) async {
+    await _dbService.updateBibleChapter(chapter);
+    _loadAll();
+  }
+
   Future<void> deleteChapter(String chapterId, {bool reload = true}) async {
     // Cascade delete verses
     final versesToDelete = _verses.where((v) => v.chapterId == chapterId).toList();

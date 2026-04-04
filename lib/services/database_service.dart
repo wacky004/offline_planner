@@ -58,6 +58,7 @@ class DatabaseService {
   // --- Bible Chapters --- //
   List<BibleChapter> getAllBibleChapters() => _bibleChaptersBox.values.toList();
   Future<void> addBibleChapter(BibleChapter chapter) async => await _bibleChaptersBox.put(chapter.id, chapter);
+  Future<void> updateBibleChapter(BibleChapter chapter) async => await _bibleChaptersBox.put(chapter.id, chapter);
   Future<void> deleteBibleChapter(String id) async => await _bibleChaptersBox.delete(id);
 
   // --- Bible Verses --- //

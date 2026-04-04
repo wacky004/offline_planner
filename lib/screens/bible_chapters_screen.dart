@@ -25,62 +25,93 @@ class BibleChaptersScreen extends StatelessWidget {
             return const Center(child: Text('No chapters added yet.', style: TextStyle(fontSize: 16)));
           }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              childAspectRatio: 1,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             itemCount: chapters.length,
             itemBuilder: (context, index) {
               final chapter = chapters[index];
-              return InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BibleVersesScreen(
-                        book: book,
-                        chapter: chapter,
-                      ),
-                    ),
-                  );
-                },
-                onLongPress: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Delete Chapter'),
-                      content: Text('Are you sure you want to permanently delete Chapter ${chapter.chapterTitle} and ALL verses inside it?'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                        TextButton(
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Delete'),
+              return Card(
+                elevation: 1,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  title: Text(
+                    chapter.chapterTitle,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (val) async {
+                      if (val == 'edit') {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) {
+                            final controller = TextEditingController(text: chapter.chapterTitle);
+                            return AlertDialog(
+                              title: const Text('Rename Chapter'),
+                              content: TextField(
+                                controller: controller,
+                                autofocus: true,
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    final newTitle = controller.text.trim();
+                                    if (newTitle.isNotEmpty) {
+                                      final updated = BibleChapter(
+                                        id: chapter.id,
+                                        bookId: chapter.bookId,
+                                        chapterTitle: newTitle,
+                                        createdAt: chapter.createdAt,
+                                        updatedAt: DateTime.now(),
+                                      );
+                                      Provider.of<BibleProvider>(context, listen: false).updateChapter(updated);
+                                    }
+                                    Navigator.pop(ctx);
+                                  },
+                                  child: const Text('Save'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      } else if (val == 'delete') {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Delete Chapter'),
+                            content: Text('Are you sure you want to permanently delete Chapter "${chapter.chapterTitle}" and ALL verses inside it?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                              TextButton(
+                                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true && context.mounted) {
+                          Provider.of<BibleProvider>(context, listen: false).deleteChapter(chapter.id);
+                        }
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Rename Chapter')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BibleVersesScreen(
+                          book: book,
+                          chapter: chapter,
                         ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true && context.mounted) {
-                    Provider.of<BibleProvider>(context, listen: false).deleteChapter(chapter.id);
-                  }
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Theme.of(context).colorScheme.surface,
-                  ),
-                  child: Center(
-                    child: Text(
-                      chapter.chapterTitle,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               );
             },
