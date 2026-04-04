@@ -5,6 +5,10 @@ import '../models/goal.dart';
 import '../models/goal_adapter.dart';
 import '../models/recipe.dart';
 import '../models/recipe_adapter.dart';
+import '../models/bible_book.dart';
+import '../models/bible_book_adapter.dart';
+import '../models/bible_chapter.dart';
+import '../models/bible_chapter_adapter.dart';
 import '../models/bible_verse.dart';
 import '../models/bible_verse_adapter.dart';
 
@@ -12,11 +16,17 @@ class DatabaseService {
   static const String _boxName = 'entriesBox';
   static const String _goalsBoxName = 'goalsBox';
   static const String _recipesBoxName = 'recipesBox';
-  static const String _bibleVersesBoxName = 'bibleVersesBox';
+  
+  static const String _bibleBooksBoxName = 'bibleBooksBox';
+  static const String _bibleChaptersBoxName = 'bibleChaptersBox';
+  static const String _bibleVersesV2BoxName = 'bibleVersesV2Box';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
   late Box<Recipe> _recipesBox;
+
+  late Box<BibleBook> _bibleBooksBox;
+  late Box<BibleChapter> _bibleChaptersBox;
   late Box<BibleVerse> _bibleVersesBox;
 
   Future<void> init() async {
@@ -24,30 +34,37 @@ class DatabaseService {
     Hive.registerAdapter(EntryAdapter());
     Hive.registerAdapter(GoalAdapter());
     Hive.registerAdapter(RecipeAdapter());
+    
+    // Explicit 3-Tier Hierarchy Adapters
+    Hive.registerAdapter(BibleBookAdapter());
+    Hive.registerAdapter(BibleChapterAdapter());
     Hive.registerAdapter(BibleVerseAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
     _recipesBox = await Hive.openBox<Recipe>(_recipesBoxName);
-    _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesBoxName);
+    
+    // Clear legacy cache and open strict V2 bindings
+    _bibleBooksBox = await Hive.openBox<BibleBook>(_bibleBooksBoxName);
+    _bibleChaptersBox = await Hive.openBox<BibleChapter>(_bibleChaptersBoxName);
+    _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesV2BoxName);
   }
 
-  // --- Bible Verses Annotations --- //
-  List<BibleVerse> getAllBibleVerses() {
-    return _bibleVersesBox.values.toList();
-  }
+  // --- Bible Books --- //
+  List<BibleBook> getAllBibleBooks() => _bibleBooksBox.values.toList();
+  Future<void> addBibleBook(BibleBook book) async => await _bibleBooksBox.put(book.id, book);
+  Future<void> deleteBibleBook(String id) async => await _bibleBooksBox.delete(id);
 
-  Future<void> addBibleVerse(BibleVerse verse) async {
-    await _bibleVersesBox.put(verse.id, verse);
-  }
+  // --- Bible Chapters --- //
+  List<BibleChapter> getAllBibleChapters() => _bibleChaptersBox.values.toList();
+  Future<void> addBibleChapter(BibleChapter chapter) async => await _bibleChaptersBox.put(chapter.id, chapter);
+  Future<void> deleteBibleChapter(String id) async => await _bibleChaptersBox.delete(id);
 
-  Future<void> updateBibleVerse(BibleVerse verse) async {
-    await _bibleVersesBox.put(verse.id, verse);
-  }
-
-  Future<void> deleteBibleVerse(String id) async {
-    await _bibleVersesBox.delete(id);
-  }
+  // --- Bible Verses --- //
+  List<BibleVerse> getAllBibleVerses() => _bibleVersesBox.values.toList();
+  Future<void> addBibleVerse(BibleVerse verse) async => await _bibleVersesBox.put(verse.id, verse);
+  Future<void> updateBibleVerse(BibleVerse verse) async => await _bibleVersesBox.put(verse.id, verse);
+  Future<void> deleteBibleVerse(String id) async => await _bibleVersesBox.delete(id);
 
   // --- Entries --- //
   List<Entry> getAllEntries() {

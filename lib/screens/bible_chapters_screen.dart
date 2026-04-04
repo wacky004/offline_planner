@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+import '../models/bible_book.dart';
+import '../models/bible_chapter.dart';
 import '../providers/bible_provider.dart';
 import 'bible_verses_screen.dart';
-import 'verse_editor_screen.dart';
 
 class BibleChaptersScreen extends StatelessWidget {
-  final String bookName;
+  final BibleBook book;
 
-  const BibleChaptersScreen({super.key, required this.bookName});
+  const BibleChaptersScreen({super.key, required this.book});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(bookName),
+        title: Text(book.name),
       ),
       body: Consumer<BibleProvider>(
         builder: (context, provider, _) {
-          final chapters = provider.getChaptersForBook(bookName);
+          final chapters = provider.getChapters(book.id);
+
+          if (chapters.isEmpty) {
+            return const Center(child: Text('No chapters added yet.', style: TextStyle(fontSize: 16)));
+          }
 
           return GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -29,15 +35,15 @@ class BibleChaptersScreen extends StatelessWidget {
             ),
             itemCount: chapters.length,
             itemBuilder: (context, index) {
-              final chapterNumber = chapters[index];
+              final chapter = chapters[index];
               return InkWell(
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => BibleVersesScreen(
-                        bookName: bookName,
-                        chapterNumber: chapterNumber,
+                        book: book,
+                        chapter: chapter,
                       ),
                     ),
                   );
@@ -47,7 +53,7 @@ class BibleChaptersScreen extends StatelessWidget {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Delete Chapter'),
-                      content: Text('Are you sure you want to permanently delete Chapter $chapterNumber and ALL verses inside it?'),
+                      content: Text('Are you sure you want to permanently delete Chapter ${chapter.chapterTitle} and ALL verses inside it?'),
                       actions: [
                         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                         TextButton(
@@ -59,7 +65,7 @@ class BibleChaptersScreen extends StatelessWidget {
                     ),
                   );
                   if (confirmed == true && context.mounted) {
-                    Provider.of<BibleProvider>(context, listen: false).deleteChapter(bookName, chapterNumber);
+                    Provider.of<BibleProvider>(context, listen: false).deleteChapter(chapter.id);
                   }
                 },
                 borderRadius: BorderRadius.circular(12),
@@ -71,7 +77,7 @@ class BibleChaptersScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      '$chapterNumber',
+                      chapter.chapterTitle,
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -83,10 +89,45 @@ class BibleChaptersScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => VerseEditorScreen(prefilledBook: bookName)),
-            );
+          showDialog(
+            context: context,
+            builder: (ctx) {
+              final controller = TextEditingController();
+              return AlertDialog(
+                title: const Text('Add Chapter'),
+                content: TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter Chapter Number/Title',
+                  ),
+                  autofocus: true,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      final title = controller.text.trim();
+                      if (title.isNotEmpty) {
+                        final newChapter = BibleChapter(
+                          id: const Uuid().v4(),
+                          bookId: book.id,
+                          chapterTitle: title,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                        );
+                        Provider.of<BibleProvider>(context, listen: false).addChapter(newChapter);
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Add'),
+                  ),
+                ],
+              );
+            },
+          );
         },
         child: const Icon(Icons.add),
       ),

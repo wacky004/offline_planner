@@ -3,7 +3,7 @@ import 'bible_verse.dart';
 
 class BibleVerseAdapter extends TypeAdapter<BibleVerse> {
   @override
-  final int typeId = 3;
+  final int typeId = 6;
 
   @override
   BibleVerse read(BinaryReader reader) {
@@ -14,40 +14,37 @@ class BibleVerseAdapter extends TypeAdapter<BibleVerse> {
     return BibleVerse(
       id: fields[0] as String,
       bookId: fields[1] as String,
-      bookName: fields[2] as String,
-      chapterNumber: fields[3] as int,
-      verseNumber: fields[4] as int,
-      verseText: fields[5] as String,
-      note: fields[6] as String,
-      isFavorite: fields[7] as bool,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(fields[8] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(fields[9] as int),
+      chapterId: fields[2] as String,
+      verseNumber: fields[3] as int,
+      verseText: fields[4] as String,
+      note: fields[5] as String,
+      isFavorite: fields[6] as bool,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(fields[7] as int),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(fields[8] as int),
     );
   }
 
   @override
   void write(BinaryWriter writer, BibleVerse obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.bookId)
       ..writeByte(2)
-      ..write(obj.bookName)
+      ..write(obj.chapterId)
       ..writeByte(3)
-      ..write(obj.chapterNumber)
-      ..writeByte(4)
       ..write(obj.verseNumber)
-      ..writeByte(5)
+      ..writeByte(4)
       ..write(obj.verseText)
-      ..writeByte(6)
+      ..writeByte(5)
       ..write(obj.note)
-      ..writeByte(7)
+      ..writeByte(6)
       ..write(obj.isFavorite)
-      ..writeByte(8)
+      ..writeByte(7)
       ..write(obj.createdAt.millisecondsSinceEpoch)
-      ..writeByte(9)
+      ..writeByte(8)
       ..write(obj.updatedAt.millisecondsSinceEpoch);
   }
 }

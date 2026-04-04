@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+import '../models/bible_book.dart';
 import '../providers/bible_provider.dart';
 import 'bible_chapters_screen.dart';
-import 'verse_editor_screen.dart';
 
 class BibleScreen extends StatelessWidget {
   const BibleScreen({super.key});
@@ -15,7 +16,7 @@ class BibleScreen extends StatelessWidget {
       ),
       body: Consumer<BibleProvider>(
         builder: (context, provider, _) {
-          final books = provider.uniqueBookNames;
+          final books = provider.books;
 
           if (books.isEmpty) {
             return Center(
@@ -26,7 +27,7 @@ class BibleScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text('No books added yet.', style: TextStyle(color: Theme.of(context).disabledColor, fontSize: 18)),
                   const SizedBox(height: 8),
-                  Text('Tap + to log your first verse.', style: TextStyle(color: Theme.of(context).disabledColor)),
+                  Text('Tap + to create your first Book.', style: TextStyle(color: Theme.of(context).disabledColor)),
                 ],
               ),
             );
@@ -35,13 +36,13 @@ class BibleScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: books.length,
             itemBuilder: (context, index) {
-              final bookName = books[index];
+              final book = books[index];
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-                  child: Text(bookName.isNotEmpty ? bookName[0].toUpperCase() : 'B', style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(book.name.isNotEmpty ? book.name[0].toUpperCase() : 'B', style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
-                title: Text(bookName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(book.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 trailing: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert),
                   onSelected: (val) async {
@@ -50,7 +51,7 @@ class BibleScreen extends StatelessWidget {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Delete Book'),
-                          content: const Text('Are you sure you want to completely delete this book and ALL its verses?'),
+                          content: const Text('Are you sure you want to completely delete this book and ALL its chapters/verses?'),
                           actions: [
                             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                             TextButton(
@@ -62,7 +63,7 @@ class BibleScreen extends StatelessWidget {
                         ),
                       );
                       if (confirmed == true && context.mounted) {
-                        Provider.of<BibleProvider>(context, listen: false).deleteBook(bookName);
+                        Provider.of<BibleProvider>(context, listen: false).deleteBook(book.id);
                       }
                     }
                   },
@@ -73,7 +74,7 @@ class BibleScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => BibleChaptersScreen(bookName: bookName)),
+                    MaterialPageRoute(builder: (_) => BibleChaptersScreen(book: book)),
                   );
                 },
               );
@@ -106,7 +107,13 @@ class BibleScreen extends StatelessWidget {
                     onPressed: () {
                       final name = controller.text.trim();
                       if (name.isNotEmpty) {
-                        Provider.of<BibleProvider>(context, listen: false).addEmptyBook(name);
+                        final newBook = BibleBook(
+                          id: const Uuid().v4(),
+                          name: name,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                        );
+                        Provider.of<BibleProvider>(context, listen: false).addBook(newBook);
                       }
                       Navigator.pop(ctx);
                     },

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/bible_book.dart';
+import '../models/bible_chapter.dart';
 import '../providers/bible_provider.dart';
 import 'verse_editor_screen.dart';
 
 class BibleVersesScreen extends StatelessWidget {
-  final String bookName;
-  final int chapterNumber;
+  final BibleBook book;
+  final BibleChapter chapter;
 
   const BibleVersesScreen({
     super.key,
-    required this.bookName,
-    required this.chapterNumber,
+    required this.book,
+    required this.chapter,
   });
 
   void _confirmDelete(BuildContext context, BibleProvider provider, String id) async {
@@ -31,7 +33,7 @@ class BibleVersesScreen extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      provider.removeAnnotation(id);
+      provider.deleteVerse(id);
     }
   }
 
@@ -39,11 +41,11 @@ class BibleVersesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('$bookName $chapterNumber'),
+        title: Text('${book.name} ${chapter.chapterTitle}'),
       ),
       body: Consumer<BibleProvider>(
         builder: (context, provider, _) {
-          final verses = provider.getVersesForChapter(bookName, chapterNumber);
+          final verses = provider.getVerses(chapter.id);
 
           if (verses.isEmpty) {
             return const Center(child: Text('No verses in this chapter yet.'));
@@ -81,7 +83,7 @@ class BibleVersesScreen extends StatelessWidget {
                               PopupMenuButton<String>(
                                 onSelected: (val) {
                                   if (val == 'edit') {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => VerseEditorScreen(verseToEdit: verse)));
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => VerseEditorScreen(book: book, chapter: chapter, verseToEdit: verse)));
                                   } else if (val == 'delete') {
                                     _confirmDelete(context, provider, verse.id);
                                   }
@@ -113,7 +115,7 @@ class BibleVersesScreen extends StatelessWidget {
         onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => VerseEditorScreen(prefilledBook: bookName, prefilledChapter: chapterNumber.toString())),
+              MaterialPageRoute(builder: (_) => VerseEditorScreen(book: book, chapter: chapter)),
             );
         },
         child: const Icon(Icons.add),

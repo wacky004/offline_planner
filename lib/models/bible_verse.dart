@@ -1,8 +1,7 @@
 class BibleVerse {
   String id;
   String bookId;
-  String bookName;
-  int chapterNumber;
+  String chapterId;
   int verseNumber;
   String verseText;
   String note;
@@ -13,8 +12,7 @@ class BibleVerse {
   BibleVerse({
     required this.id,
     required this.bookId,
-    required this.bookName,
-    required this.chapterNumber,
+    required this.chapterId,
     required this.verseNumber,
     required this.verseText,
     this.note = '',
@@ -26,8 +24,7 @@ class BibleVerse {
   BibleVerse copyWith({
     String? id,
     String? bookId,
-    String? bookName,
-    int? chapterNumber,
+    String? chapterId,
     int? verseNumber,
     String? verseText,
     String? note,
@@ -38,8 +35,7 @@ class BibleVerse {
     return BibleVerse(
       id: id ?? this.id,
       bookId: bookId ?? this.bookId,
-      bookName: bookName ?? this.bookName,
-      chapterNumber: chapterNumber ?? this.chapterNumber,
+      chapterId: chapterId ?? this.chapterId,
       verseNumber: verseNumber ?? this.verseNumber,
       verseText: verseText ?? this.verseText,
       note: note ?? this.note,

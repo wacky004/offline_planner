@@ -1,12 +1,14 @@
-class BibleBook {
+class BibleChapter {
   String id;
-  String name;
+  String bookId;
+  String chapterTitle;
   DateTime createdAt;
   DateTime updatedAt;
 
-  BibleBook({
+  BibleChapter({
     required this.id,
-    required this.name,
+    required this.bookId,
+    required this.chapterTitle,
     required this.createdAt,
     required this.updatedAt,
   });
