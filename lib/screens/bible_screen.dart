@@ -56,10 +56,39 @@ class BibleScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const VerseEditorScreen()),
-            );
+          showDialog(
+            context: context,
+            builder: (ctx) {
+              final controller = TextEditingController();
+              return AlertDialog(
+                title: const Text('Add Book'),
+                content: TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter Book name (e.g. Genesis)',
+                  ),
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name = controller.text.trim();
+                      if (name.isNotEmpty) {
+                        Provider.of<BibleProvider>(context, listen: false).addEmptyBook(name);
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Add'),
+                  ),
+                ],
+              );
+            },
+          );
         },
         child: const Icon(Icons.add),
       ),

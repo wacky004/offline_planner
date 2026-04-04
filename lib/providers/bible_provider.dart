@@ -30,7 +30,7 @@ class BibleProvider with ChangeNotifier {
   /// Gets a list of unique chapter numbers for a given book
   List<int> getChaptersForBook(String bookName) {
     final chapters = _savedVerses
-        .where((v) => v.bookName == bookName)
+        .where((v) => v.bookName == bookName && v.verseText != '___SYSTEM_BOOK___')
         .map((v) => v.chapterNumber)
         .toSet()
         .toList();
@@ -41,10 +41,26 @@ class BibleProvider with ChangeNotifier {
   /// Gets all verses for a given book and chapter, sorted by verse number
   List<BibleVerse> getVersesForChapter(String bookName, int chapterNumber) {
     final v = _savedVerses
-        .where((v) => v.bookName == bookName && v.chapterNumber == chapterNumber)
+        .where((v) => v.bookName == bookName && v.chapterNumber == chapterNumber && v.verseText != '___SYSTEM_BOOK___')
         .toList();
     v.sort((a, b) => a.verseNumber.compareTo(b.verseNumber));
     return v;
+  }
+
+  Future<void> addEmptyBook(String bookName) async {
+    if (uniqueBookNames.contains(bookName)) return;
+    
+    final dummy = BibleVerse(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      bookId: bookName.toLowerCase(),
+      bookName: bookName,
+      chapterNumber: 0,
+      verseNumber: 0,
+      verseText: '___SYSTEM_BOOK___',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    await saveAnnotation(dummy);
   }
 
   Future<void> saveAnnotation(BibleVerse verse) async {
