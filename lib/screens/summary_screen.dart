@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/planner_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/entry_type.dart';
+import '../widgets/top_left_menu.dart';
 
 class SummaryScreen extends StatelessWidget {
   const SummaryScreen({super.key});
@@ -10,7 +11,10 @@ class SummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Monthly Summary')),
+      appBar: AppBar(
+        leading: const TopLeftMenu(),
+        title: const Text('Monthly Summary'),
+      ),
       body: Consumer2<PlannerProvider, SettingsProvider>(
         builder: (context, provider, settings, _) {
           final entries = provider.entries.where((e) => e.date.month == DateTime.now().month && e.date.year == DateTime.now().year).toList();

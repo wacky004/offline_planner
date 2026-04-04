@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'calendar_screen.dart';
-import 'calculator_screen.dart';
 import 'summary_screen.dart';
-import 'settings_screen.dart';
 import 'goals_screen.dart';
+import 'cookbook_screen.dart';
 
 class MainNav extends StatefulWidget {
   const MainNav({super.key});
@@ -17,10 +16,9 @@ class _MainNavState extends State<MainNav> {
   
   final List<Widget> _screens = [
     const CalendarScreen(),
-    const CalculatorScreen(),
+    const CookbookScreen(),
     const SummaryScreen(),
     const GoalsScreen(),
-    const SettingsScreen(),
   ];
 
   @override
@@ -32,10 +30,9 @@ class _MainNavState extends State<MainNav> {
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Calendar'),
-          NavigationDestination(icon: Icon(Icons.calculate), label: 'Calculator'),
+          NavigationDestination(icon: Icon(Icons.restaurant_menu), label: 'Cookbook'),
           NavigationDestination(icon: Icon(Icons.pie_chart), label: 'Summary'),
           NavigationDestination(icon: Icon(Icons.savings), label: 'Goals'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );

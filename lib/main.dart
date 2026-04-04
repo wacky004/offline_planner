@@ -5,6 +5,7 @@ import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/pin_service.dart';
 import 'providers/planner_provider.dart';
+import 'providers/cookbook_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/pin_screen.dart';
 import 'screens/main_nav.dart';
@@ -22,6 +23,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PlannerProvider(dbService, notifService)),
+        ChangeNotifierProvider(create: (_) => CookbookProvider(dbService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: const PlannerApp(),

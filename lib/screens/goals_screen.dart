@@ -4,6 +4,7 @@ import '../models/goal.dart';
 import '../providers/planner_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/add_goal_dialog.dart';
+import '../widgets/top_left_menu.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -50,7 +51,10 @@ class GoalsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Savings Goals')),
+      appBar: AppBar(
+        leading: const TopLeftMenu(),
+        title: const Text('Savings Goals'),
+      ),
       body: Consumer2<PlannerProvider, SettingsProvider>(
         builder: (context, provider, settings, _) {
           final goals = provider.goals;
