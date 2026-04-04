@@ -9,6 +9,7 @@ import 'providers/planner_provider.dart';
 import 'providers/cookbook_provider.dart';
 import 'providers/bible_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/music_provider.dart';
 import 'screens/pin_screen.dart';
 import 'screens/main_nav.dart';
 
@@ -28,6 +29,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CookbookProvider(dbService)),
         ChangeNotifierProvider(create: (_) => BibleProvider(dbService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => MusicProvider(dbService)),
       ],
       child: const PlannerApp(),
     ),

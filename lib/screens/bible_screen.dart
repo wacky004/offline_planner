@@ -4,13 +4,14 @@ import 'package:uuid/uuid.dart';
 import '../models/bible_book.dart';
 import '../providers/bible_provider.dart';
 import 'bible_chapters_screen.dart';
-
+import '../widgets/app_drawer.dart';
 class BibleScreen extends StatelessWidget {
   const BibleScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Bible Journal'),
       ),

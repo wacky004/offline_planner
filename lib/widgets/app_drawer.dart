@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../screens/cookbook_screen.dart';
 import '../screens/calculator_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/bible_screen.dart';
+import '../screens/music_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -46,6 +48,22 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.menu_book),
+            title: const Text('Bible Journal'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.library_music),
+            title: const Text('Music Player'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const MusicScreen()));
             },
           ),
           const Divider(),

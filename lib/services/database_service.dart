@@ -11,6 +11,8 @@ import '../models/bible_chapter.dart';
 import '../models/bible_chapter_adapter.dart';
 import '../models/bible_verse.dart';
 import '../models/bible_verse_adapter.dart';
+import '../models/song.dart';
+import '../models/song_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
@@ -20,6 +22,7 @@ class DatabaseService {
   static const String _bibleBooksBoxName = 'bibleBooksBox';
   static const String _bibleChaptersBoxName = 'bibleChaptersBox';
   static const String _bibleVersesV2BoxName = 'bibleVersesV2Box';
+  static const String _songsBoxName = 'songsBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
@@ -28,6 +31,7 @@ class DatabaseService {
   late Box<BibleBook> _bibleBooksBox;
   late Box<BibleChapter> _bibleChaptersBox;
   late Box<BibleVerse> _bibleVersesBox;
+  late Box<Song> _songsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -39,6 +43,7 @@ class DatabaseService {
     Hive.registerAdapter(BibleBookAdapter());
     Hive.registerAdapter(BibleChapterAdapter());
     Hive.registerAdapter(BibleVerseAdapter());
+    Hive.registerAdapter(SongAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
@@ -48,6 +53,7 @@ class DatabaseService {
     _bibleBooksBox = await Hive.openBox<BibleBook>(_bibleBooksBoxName);
     _bibleChaptersBox = await Hive.openBox<BibleChapter>(_bibleChaptersBoxName);
     _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesV2BoxName);
+    _songsBox = await Hive.openBox<Song>(_songsBoxName);
   }
 
   // --- Bible Books --- //
@@ -117,4 +123,10 @@ class DatabaseService {
   Future<void> deleteRecipe(String id) async {
     await _recipesBox.delete(id);
   }
+
+  // --- Songs --- //
+  List<Song> getAllSongs() => _songsBox.values.toList();
+  Future<void> addSong(Song song) async => await _songsBox.put(song.id, song);
+  Future<void> updateSong(Song song) async => await _songsBox.put(song.id, song);
+  Future<void> deleteSong(String id) async => await _songsBox.delete(id);
 }

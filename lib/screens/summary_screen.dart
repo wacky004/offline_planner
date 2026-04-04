@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/planner_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/entry_type.dart';
-import '../widgets/top_left_menu.dart';
+import '../widgets/app_drawer.dart';
 
 class SummaryScreen extends StatelessWidget {
   const SummaryScreen({super.key});
@@ -11,8 +11,8 @@ class SummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: const TopLeftMenu(),
         title: const Text('Monthly Summary'),
       ),
       body: Consumer2<PlannerProvider, SettingsProvider>(

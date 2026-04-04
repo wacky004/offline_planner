@@ -5,7 +5,7 @@ import '../providers/planner_provider.dart';
 import '../models/entry.dart';
 import '../models/entry_type.dart';
 import 'daily_screen.dart';
-import '../widgets/top_left_menu.dart';
+import '../widgets/app_drawer.dart';
 
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
@@ -13,8 +13,8 @@ class CalendarScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: const TopLeftMenu(),
         title: const Text('Offline Planner'),
       ),
       body: Consumer<PlannerProvider>(
