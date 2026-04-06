@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../models/recipe.dart';
 import '../providers/cookbook_provider.dart';
 import '../providers/settings_provider.dart';
@@ -30,20 +31,28 @@ class RecipeListItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon based on category or favorite
+              // Icon or Image based on category or favorite
               Container(
-                width: 50,
-                height: 50,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Center(
-                  child: Icon(
-                    Icons.restaurant_menu,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: recipe.imagePath != null
+                    ? Image.file(
+                        File(recipe.imagePath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => Icon(
+                          Icons.broken_image,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.5),
+                        ),
+                      )
+                    : Icon(
+                        Icons.restaurant_menu,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
               ),
               const SizedBox(width: 16),
               // Title and Category

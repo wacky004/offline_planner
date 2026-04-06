@@ -11,6 +11,7 @@ class Recipe {
   bool isFavorite;
   DateTime createdAt;
   DateTime updatedAt;
+  String? imagePath;
 
   Recipe({
     required this.id,
@@ -23,6 +24,7 @@ class Recipe {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.imagePath,
   });
 
   Recipe copyWith({
@@ -36,6 +38,7 @@ class Recipe {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? imagePath,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -48,6 +51,7 @@ class Recipe {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      imagePath: imagePath ?? this.imagePath,
     );
   }
 }

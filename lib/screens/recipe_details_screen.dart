@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../models/recipe.dart';
 import '../providers/cookbook_provider.dart';
 import 'recipe_editor_screen.dart';
@@ -90,78 +91,104 @@ class RecipeDetailsScreen extends StatelessWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        updatedRecipe.title,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                if (updatedRecipe.imagePath != null)
+                  Container(
+                    width: double.infinity,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    ),
+                    child: Image.file(
+                      File(updatedRecipe.imagePath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, stack) => const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                          Text('Image not found or moved'),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(
-                        updatedRecipe.isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: updatedRecipe.isFavorite ? Colors.red : null,
-                        size: 32,
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              updatedRecipe.title,
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              updatedRecipe.isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: updatedRecipe.isFavorite ? Colors.red : null,
+                              size: 32,
+                            ),
+                            onPressed: () => provider.toggleFavorite(updatedRecipe),
+                          )
+                        ],
                       ),
-                      onPressed: () => provider.toggleFavorite(updatedRecipe),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Chip(
-                  label: Text(updatedRecipe.category.name.toUpperCase()),
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
-                ),
-                const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      Chip(
+                        label: Text(updatedRecipe.category.name.toUpperCase()),
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                      ),
+                      const SizedBox(height: 24),
 
-                // Ingredients
-                Text('Ingredients', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    updatedRecipe.ingredients,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
+                      // Ingredients
+                      Text('Ingredients', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          updatedRecipe.ingredients,
+                          style: const TextStyle(fontSize: 16, height: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Steps
+                      Text('Cooking Steps', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          updatedRecipe.cookingSteps,
+                          style: const TextStyle(fontSize: 16, height: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (updatedRecipe.notes.isNotEmpty) ...[
+                        Text('Notes', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text(
+                          updatedRecipe.notes,
+                          style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Steps
-                Text('Cooking Steps', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    updatedRecipe.cookingSteps,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                if (updatedRecipe.notes.isNotEmpty) ...[
-                  Text('Notes', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(
-                    updatedRecipe.notes,
-                    style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-                  ),
-                ],
               ],
             ),
           );

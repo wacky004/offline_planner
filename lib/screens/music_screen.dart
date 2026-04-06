@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/music_provider.dart';
+import '../providers/music_provider.dart' as music;
 import '../models/song.dart';
 import '../models/playlist.dart';
 import '../widgets/app_drawer.dart';
@@ -41,7 +41,7 @@ class MusicScreen extends StatelessWidget {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () {
-                  Provider.of<MusicProvider>(context, listen: false).saveLyrics(song.id, controller.text);
+                  Provider.of<music.MusicProvider>(context, listen: false).saveLyrics(song.id, controller.text);
                   Navigator.pop(ctx);
                 },
                 icon: const Icon(Icons.save),
@@ -59,7 +59,7 @@ class MusicScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
-        return Consumer<MusicProvider>(
+        return Consumer<music.MusicProvider>(
           builder: (context, provider, _) {
             if (provider.playlists.isEmpty) {
               return const Center(child: Text('No playlists available. Create one first.'));
@@ -115,7 +115,7 @@ class MusicScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
                if (controller.text.trim().isNotEmpty) {
-                 Provider.of<MusicProvider>(context, listen: false).addPlaylist(controller.text.trim());
+                 Provider.of<music.MusicProvider>(context, listen: false).addPlaylist(controller.text.trim());
                }
                Navigator.pop(ctx);
             },
@@ -126,13 +126,13 @@ class MusicScreen extends StatelessWidget {
     );
   }
 
-  void _showPlaylistSongsModal(BuildContext context, Playlist pl, MusicProvider provider) {
+  void _showPlaylistSongsModal(BuildContext context, Playlist pl, music.MusicProvider provider) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) {
-        return Consumer<MusicProvider>(
+        return Consumer<music.MusicProvider>(
           builder: (context, reactiveProvider, _) {
             final playlistSongs = reactiveProvider.getSongsForPlaylist(pl);
             return Column(
@@ -179,7 +179,7 @@ class MusicScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSongTile(BuildContext context, Song song, MusicProvider provider, {List<Song>? contextQueue}) {
+  Widget _buildSongTile(BuildContext context, Song song, music.MusicProvider provider, {List<Song>? contextQueue}) {
     final isCurrentlyPlaying = provider.currentSong?.id == song.id;
     return ListTile(
       leading: Icon(
@@ -237,7 +237,7 @@ class MusicScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
               onPressed: () {
-                Provider.of<MusicProvider>(context, listen: false).addSong();
+                Provider.of<music.MusicProvider>(context, listen: false).addSong();
               },
               tooltip: 'Import MP3',
             )
@@ -250,7 +250,7 @@ class MusicScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: Consumer<MusicProvider>(
+        body: Consumer<music.MusicProvider>(
           builder: (context, provider, child) {
             return Column(
               children: [
@@ -380,11 +380,11 @@ class MusicScreen extends StatelessWidget {
                             ),
                             IconButton(
                               icon: Icon(
-                                provider.repeatMode == RepeatMode.one 
+                                provider.repeatMode == music.RepeatMode.one 
                                   ? Icons.repeat_one_on 
-                                  : (provider.repeatMode == RepeatMode.all ? Icons.repeat_on : Icons.repeat)
+                                  : (provider.repeatMode == music.RepeatMode.all ? Icons.repeat_on : Icons.repeat)
                               ),
-                              color: provider.repeatMode != RepeatMode.off ? Theme.of(context).colorScheme.primary : null,
+                              color: provider.repeatMode != music.RepeatMode.off ? Theme.of(context).colorScheme.primary : null,
                               onPressed: () => provider.cycleRepeatMode(),
                             ),
                           ],

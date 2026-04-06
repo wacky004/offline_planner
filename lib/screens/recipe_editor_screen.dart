@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import 'dart:io';
 import '../models/recipe.dart';
 import '../models/recipe_category.dart';
 import '../providers/cookbook_provider.dart';
@@ -25,6 +27,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   
   RecipeCategory _category = RecipeCategory.ulam;
   bool _isFavorite = false;
+  String? _imagePath;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _notesController = TextEditingController(text: r?.notes ?? '');
     _category = r?.category ?? RecipeCategory.ulam;
     _isFavorite = r?.isFavorite ?? false;
+    _imagePath = r?.imagePath;
   }
 
   @override
@@ -47,6 +51,26 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _costController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
+        type: fp.FileType.image,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _imagePath = result.files.single.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick image.')),
+        );
+      }
+    }
   }
 
   void _saveRecipe() {
@@ -64,6 +88,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         isFavorite: _isFavorite,
         createdAt: widget.recipeToEdit?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
+        imagePath: _imagePath,
       );
 
       if (widget.recipeToEdit != null) {
@@ -100,6 +125,57 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+            // Image Picker Section
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).disabledColor.withValues(alpha: 0.3)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _imagePath != null
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(
+                            File(_imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                Text('Image not found'),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                                onPressed: () => setState(() => _imagePath = null),
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text('Add Picture', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 24),
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -131,7 +207,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
               decoration: const InputDecoration(
                 labelText: 'Estimated Cost (optional)',
                 border: OutlineInputBorder(),
-                prefixText: '\$ ', // Can be customized per settings later
+                prefixText: '\$ ',
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
