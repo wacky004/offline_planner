@@ -70,7 +70,7 @@ class MusicProvider extends ChangeNotifier {
 
   Future<void> addSong() async {
     try {
-      fp.FilePickerResult? result = await fp.FilePicker.pickFiles(
+      fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
         type: fp.FileType.custom,
         allowedExtensions: ['mp3', 'm4a', 'wav'],
       );
