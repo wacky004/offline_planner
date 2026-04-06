@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import '../models/bible_book.dart';
 import '../models/bible_chapter.dart';
 import '../models/bible_verse.dart';
@@ -33,6 +34,38 @@ class BibleProvider with ChangeNotifier {
 
   Future<void> addBook(BibleBook book) async {
     await _dbService.addBibleBook(book);
+    _loadAll();
+  }
+
+  Future<void> addBookWithHierarchy(BibleBook book, int chaptersCount, int versesPerChapter) async {
+    await _dbService.addBibleBook(book);
+    final now = DateTime.now();
+
+    for (int i = 1; i <= chaptersCount; i++) {
+      final chapterId = const Uuid().v4();
+      final chapter = BibleChapter(
+        id: chapterId,
+        bookId: book.id,
+        chapterTitle: 'Chapter $i',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await _dbService.addBibleChapter(chapter);
+
+      for (int j = 1; j <= versesPerChapter; j++) {
+        final verseId = const Uuid().v4();
+        final verse = BibleVerse(
+          id: verseId,
+          bookId: book.id,
+          chapterId: chapterId,
+          verseNumber: j,
+          verseText: '',
+          createdAt: now,
+          updatedAt: now,
+        );
+        await _dbService.addBibleVerse(verse);
+      }
+    }
     _loadAll();
   }
 

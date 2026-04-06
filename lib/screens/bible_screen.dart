@@ -13,7 +13,7 @@ class BibleScreen extends StatelessWidget {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Bible Journal'),
+        title: const Text('Bible Library'),
       ),
       body: Consumer<BibleProvider>(
         builder: (context, provider, _) {
@@ -89,15 +89,43 @@ class BibleScreen extends StatelessWidget {
             context: context,
             builder: (ctx) {
               final controller = TextEditingController();
+              final chaptersController = TextEditingController();
+              final versesController = TextEditingController();
               return AlertDialog(
                 title: const Text('Add Book'),
-                content: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter Book name (e.g. Genesis)',
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: 'Book Name',
+                          hintText: 'e.g. Genesis',
+                        ),
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: chaptersController,
+                        decoration: const InputDecoration(
+                          labelText: 'Number of Chapters',
+                          hintText: 'e.g. 50',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: versesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Verses per Chapter',
+                          hintText: 'e.g. 31',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
                   ),
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.words,
                 ),
                 actions: [
                   TextButton(
@@ -107,7 +135,19 @@ class BibleScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () {
                       final name = controller.text.trim();
-                      if (name.isNotEmpty) {
+                      final chapters = int.tryParse(chaptersController.text.trim()) ?? 0;
+                      final verses = int.tryParse(versesController.text.trim()) ?? 0;
+                      
+                      if (name.isNotEmpty && chapters > 0 && verses > 0) {
+                        final newBook = BibleBook(
+                          id: const Uuid().v4(),
+                          name: name,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                        );
+                        Provider.of<BibleProvider>(context, listen: false).addBookWithHierarchy(newBook, chapters, verses);
+                      } else if (name.isNotEmpty) {
+                        // Fallback: create empty book if chapters/verses are invalid or missing
                         final newBook = BibleBook(
                           id: const Uuid().v4(),
                           name: name,
@@ -118,7 +158,7 @@ class BibleScreen extends StatelessWidget {
                       }
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Add'),
+                    child: const Text('Create'),
                   ),
                 ],
               );

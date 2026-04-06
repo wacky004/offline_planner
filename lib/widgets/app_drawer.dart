@@ -52,7 +52,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.menu_book),
-            title: const Text('Bible Journal'),
+            title: const Text('Bible'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleScreen()));
