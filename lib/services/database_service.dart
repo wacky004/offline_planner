@@ -13,6 +13,8 @@ import '../models/bible_verse.dart';
 import '../models/bible_verse_adapter.dart';
 import '../models/song.dart';
 import '../models/song_adapter.dart';
+import '../models/playlist.dart';
+import '../models/playlist_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
@@ -23,6 +25,7 @@ class DatabaseService {
   static const String _bibleChaptersBoxName = 'bibleChaptersBox';
   static const String _bibleVersesV2BoxName = 'bibleVersesV2Box';
   static const String _songsBoxName = 'songsBox';
+  static const String _playlistsBoxName = 'playlistsBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
@@ -32,6 +35,7 @@ class DatabaseService {
   late Box<BibleChapter> _bibleChaptersBox;
   late Box<BibleVerse> _bibleVersesBox;
   late Box<Song> _songsBox;
+  late Box<Playlist> _playlistsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -44,6 +48,7 @@ class DatabaseService {
     Hive.registerAdapter(BibleChapterAdapter());
     Hive.registerAdapter(BibleVerseAdapter());
     Hive.registerAdapter(SongAdapter());
+    Hive.registerAdapter(PlaylistAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
@@ -54,6 +59,7 @@ class DatabaseService {
     _bibleChaptersBox = await Hive.openBox<BibleChapter>(_bibleChaptersBoxName);
     _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesV2BoxName);
     _songsBox = await Hive.openBox<Song>(_songsBoxName);
+    _playlistsBox = await Hive.openBox<Playlist>(_playlistsBoxName);
   }
 
   // --- Bible Books --- //
@@ -129,4 +135,10 @@ class DatabaseService {
   Future<void> addSong(Song song) async => await _songsBox.put(song.id, song);
   Future<void> updateSong(Song song) async => await _songsBox.put(song.id, song);
   Future<void> deleteSong(String id) async => await _songsBox.delete(id);
+
+  // --- Playlists --- //
+  List<Playlist> getAllPlaylists() => _playlistsBox.values.toList();
+  Future<void> addPlaylist(Playlist playlist) async => await _playlistsBox.put(playlist.id, playlist);
+  Future<void> updatePlaylist(Playlist playlist) async => await _playlistsBox.put(playlist.id, playlist);
+  Future<void> deletePlaylist(String id) async => await _playlistsBox.delete(id);
 }

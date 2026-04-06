@@ -4,6 +4,8 @@ class Song {
   String filePath;
   int? durationMs;
   DateTime createdAt;
+  int playCount;
+  String lyrics;
 
   Song({
     required this.id,
@@ -11,6 +13,8 @@ class Song {
     required this.filePath,
     this.durationMs,
     required this.createdAt,
+    this.playCount = 0,
+    this.lyrics = '',
   });
 
   Song copyWith({
@@ -19,6 +23,8 @@ class Song {
     String? filePath,
     int? durationMs,
     DateTime? createdAt,
+    int? playCount,
+    String? lyrics,
   }) {
     return Song(
       id: id ?? this.id,
@@ -26,6 +32,8 @@ class Song {
       filePath: filePath ?? this.filePath,
       durationMs: durationMs ?? this.durationMs,
       createdAt: createdAt ?? this.createdAt,
+      playCount: playCount ?? this.playCount,
+      lyrics: lyrics ?? this.lyrics,
     );
   }
 }

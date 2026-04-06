@@ -4,7 +4,10 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:uuid/uuid.dart';
 import 'dart:io';
 import '../models/song.dart';
+import '../models/playlist.dart';
 import '../services/database_service.dart';
+
+enum RepeatMode { off, all, one }
 
 class MusicProvider extends ChangeNotifier {
   final DatabaseService _dbService;
@@ -12,6 +15,9 @@ class MusicProvider extends ChangeNotifier {
 
   List<Song> _songs = [];
   List<Song> get songs => _songs;
+
+  List<Playlist> _playlists = [];
+  List<Playlist> get playlists => _playlists;
 
   Song? _currentSong;
   Song? get currentSong => _currentSong;
@@ -25,14 +31,28 @@ class MusicProvider extends ChangeNotifier {
   Duration _position = Duration.zero;
   Duration get position => _position;
 
+  // Playback constraints
+  List<Song> _currentQueue = [];
+  List<Song> _originalQueue = [];
+  
+  bool _isShuffle = false;
+  bool get isShuffle => _isShuffle;
+
+  RepeatMode _repeatMode = RepeatMode.off;
+  RepeatMode get repeatMode => _repeatMode;
+
   MusicProvider(this._dbService) {
-    _loadSongs();
+    _loadAll();
     _initAudioPlayer();
   }
 
-  void _loadSongs() {
+  void _loadAll() {
     _songs = _dbService.getAllSongs();
     _songs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    
+    _playlists = _dbService.getAllPlaylists();
+    _playlists.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    
     notifyListeners();
   }
 
@@ -44,16 +64,11 @@ class MusicProvider extends ChangeNotifier {
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
       _duration = newDuration;
-      // We can also update the song duration in db if it's missing
       if (_currentSong != null && _currentSong!.durationMs == null) {
          final updatedSong = _currentSong!.copyWith(durationMs: newDuration.inMilliseconds);
          _currentSong = updatedSong;
          _dbService.updateSong(updatedSong);
-         // Update the list entry as well
-         final index = _songs.indexWhere((s) => s.id == updatedSong.id);
-         if (index >= 0) {
-           _songs[index] = updatedSong;
-         }
+         _updateLocalSongReference(updatedSong);
       }
       notifyListeners();
     });
@@ -64,8 +79,31 @@ class MusicProvider extends ChangeNotifier {
     });
 
     _audioPlayer.onPlayerComplete.listen((event) {
-      next(); // Auto-play next song
+      _incrementPlayCount(_currentSong);
+      if (_repeatMode == RepeatMode.one) {
+        seek(Duration.zero);
+        _audioPlayer.resume();
+      } else {
+        next(autoPlay: true);
+      }
     });
+  }
+
+  void _updateLocalSongReference(Song updatedSong) {
+    final index = _songs.indexWhere((s) => s.id == updatedSong.id);
+    if (index >= 0) {
+      _songs[index] = updatedSong;
+    }
+  }
+
+  void _incrementPlayCount(Song? song) {
+    if (song != null) {
+      final updated = song.copyWith(playCount: song.playCount + 1);
+      _dbService.updateSong(updated);
+      _updateLocalSongReference(updated);
+      if (_currentSong?.id == updated.id) _currentSong = updated;
+      notifyListeners();
+    }
   }
 
   Future<void> addSong() async {
@@ -85,7 +123,7 @@ class MusicProvider extends ChangeNotifier {
             createdAt: DateTime.now(),
           );
           await _dbService.addSong(song);
-          _loadSongs();
+          _loadAll();
         }
       }
     } catch (e) {
@@ -94,18 +132,107 @@ class MusicProvider extends ChangeNotifier {
   }
 
   Future<void> removeSong(Song song) async {
+    // Cascade removal from playlists
+    for (var playlist in _playlists) {
+      if (playlist.songIds.contains(song.id)) {
+        final updatedIds = List<String>.from(playlist.songIds)..remove(song.id);
+        await updatePlaylist(playlist.copyWith(songIds: updatedIds, updatedAt: DateTime.now()));
+      }
+    }
+    
     await _dbService.deleteSong(song.id);
     if (_currentSong?.id == song.id) {
       await stop();
     }
-    _loadSongs();
+    _loadAll();
   }
 
-  Future<void> play(Song song) async {
+  Future<void> saveLyrics(String songId, String lyrics) async {
+    final song = _songs.firstWhere((s) => s.id == songId);
+    final updated = song.copyWith(lyrics: lyrics);
+    await _dbService.updateSong(updated);
+    _updateLocalSongReference(updated);
+    if (_currentSong?.id == updated.id) _currentSong = updated;
+    notifyListeners();
+  }
+
+  // --- Playlists --- //
+  Future<void> addPlaylist(String name) async {
+    final pl = Playlist(
+      id: const Uuid().v4(),
+      name: name,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    await _dbService.addPlaylist(pl);
+    _loadAll();
+  }
+
+  Future<void> updatePlaylist(Playlist pl) async {
+    await _dbService.updatePlaylist(pl);
+    _loadAll();
+  }
+
+  Future<void> deletePlaylist(String id) async {
+    await _dbService.deletePlaylist(id);
+    _loadAll();
+  }
+
+  Future<void> addSongToPlaylist(String playlistId, String songId) async {
+    final pl = _playlists.firstWhere((p) => p.id == playlistId);
+    if (!pl.songIds.contains(songId)) {
+      final updatedIds = List<String>.from(pl.songIds)..add(songId);
+      await updatePlaylist(pl.copyWith(songIds: updatedIds, updatedAt: DateTime.now()));
+    }
+  }
+
+  Future<void> removeSongFromPlaylist(String playlistId, String songId) async {
+    final pl = _playlists.firstWhere((p) => p.id == playlistId);
+    final updatedIds = List<String>.from(pl.songIds)..remove(songId);
+    await updatePlaylist(pl.copyWith(songIds: updatedIds, updatedAt: DateTime.now()));
+  }
+
+  // --- Playback Controls --- //
+  void toggleShuffle() {
+    _isShuffle = !_isShuffle;
+    if (_isShuffle) {
+      _currentQueue.shuffle();
+      // Ensure current song is at the top conceptually or just leave random
+      if (_currentSong != null) {
+        _currentQueue.removeWhere((s) => s.id == _currentSong!.id);
+        _currentQueue.insert(0, _currentSong!);
+      }
+    } else {
+      // Restore original queue order
+      _currentQueue = List.from(_originalQueue);
+    }
+    notifyListeners();
+  }
+
+  void cycleRepeatMode() {
+    if (_repeatMode == RepeatMode.off) {
+      _repeatMode = RepeatMode.all;
+    } else if (_repeatMode == RepeatMode.all) {
+      _repeatMode = RepeatMode.one;
+    } else {
+      _repeatMode = RepeatMode.off;
+    }
+    notifyListeners();
+  }
+
+  Future<void> play(Song song, {List<Song>? queueContext}) async {
     final file = File(song.filePath);
     if (!await file.exists()) {
-      // Handle missing file
       return;
+    }
+    
+    // Set queue context if provided, else default to all songs
+    _originalQueue = queueContext ?? List.from(_songs);
+    _currentQueue = List.from(_originalQueue);
+    if (_isShuffle) {
+      _currentQueue.shuffle();
+      _currentQueue.removeWhere((s) => s.id == song.id);
+      _currentQueue.insert(0, song);
     }
     
     if (_currentSong?.id != song.id) {
@@ -126,31 +253,54 @@ class MusicProvider extends ChangeNotifier {
     await _audioPlayer.stop();
     _currentSong = null;
     _position = Duration.zero;
+    _currentQueue.clear();
+    _originalQueue.clear();
     notifyListeners();
   }
 
-  Future<void> next() async {
-    if (_songs.isEmpty) return;
-    int currentIndex = _songs.indexWhere((s) => s.id == _currentSong?.id);
-    if (currentIndex >= 0 && currentIndex < _songs.length - 1) {
-      await play(_songs[currentIndex + 1]);
+  Future<void> next({bool autoPlay = false}) async {
+    if (_currentQueue.isEmpty) return;
+    int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
+    
+    if (currentIndex >= 0 && currentIndex < _currentQueue.length - 1) {
+      await play(_currentQueue[currentIndex + 1], queueContext: _originalQueue);
     } else {
-      await play(_songs.first);
+      if (_repeatMode == RepeatMode.all || !autoPlay) {
+        await play(_currentQueue.first, queueContext: _originalQueue);
+      } else {
+        await stop();
+      }
     }
   }
 
   Future<void> previous() async {
-    if (_songs.isEmpty) return;
-    int currentIndex = _songs.indexWhere((s) => s.id == _currentSong?.id);
+    if (_currentQueue.isEmpty) return;
+    int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
+    
+    // If past 3 seconds, previous restarts current track
+    if (_position.inSeconds > 3 && _currentSong != null) {
+      await seek(Duration.zero);
+      return;
+    }
+    
     if (currentIndex > 0) {
-      await play(_songs[currentIndex - 1]);
+      await play(_currentQueue[currentIndex - 1], queueContext: _originalQueue);
     } else {
-      await play(_songs.last);
+      await play(_currentQueue.last, queueContext: _originalQueue);
     }
   }
 
   Future<void> seek(Duration position) async {
     await _audioPlayer.seek(position);
+  }
+
+  List<Song> get topSongs {
+    final sorted = List<Song>.from(_songs)..sort((a, b) => b.playCount.compareTo(a.playCount));
+    return sorted;
+  }
+
+  List<Song> getSongsForPlaylist(Playlist pl) {
+    return pl.songIds.map((id) => _songs.firstWhere((s) => s.id == id, orElse: () => Song(id: '', title: '', filePath: '', createdAt: DateTime.now()))).where((s) => s.id.isNotEmpty).toList();
   }
 
   @override
