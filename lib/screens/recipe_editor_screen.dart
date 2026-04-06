@@ -115,7 +115,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                 labelText: 'Category',
                 border: OutlineInputBorder(),
               ),
-              items: RecipeCategory.values.map((cat) {
+              items: recipeCategoryDisplayOrder.map((cat) {
                 return DropdownMenuItem(
                   value: cat,
                   child: Text(cat.name.toUpperCase()),

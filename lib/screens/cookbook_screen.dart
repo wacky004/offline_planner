@@ -49,7 +49,7 @@ class CookbookScreen extends StatelessWidget {
                       onSelected: (_) => provider.setSelectedCategory(null),
                     ),
                     const SizedBox(width: 8),
-                    ...RecipeCategory.values.map((cat) {
+                    ...recipeCategoryDisplayOrder.map((cat) {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: FilterChip(
