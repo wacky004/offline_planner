@@ -20,13 +20,16 @@ class EntryAdapter extends TypeAdapter<Entry> {
       amount: fields[4] as double?,
       date: DateTime.fromMillisecondsSinceEpoch(fields[5] as int),
       isCompletedOrPaid: fields[6] as bool,
+      hasReminder: fields[7] as bool? ?? false,
+      reminderTime: fields[8] != null ? DateTime.fromMillisecondsSinceEpoch(fields[8] as int) : null,
+      alarmSoundId: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Entry obj) {
     writer
-      ..writeByte(7) // Num of fields
+      ..writeByte(10) // Num of fields
       //
       ..writeByte(0)
       ..write(obj.id)
@@ -47,6 +50,15 @@ class EntryAdapter extends TypeAdapter<Entry> {
       ..write(obj.date.millisecondsSinceEpoch)
       //
       ..writeByte(6)
-      ..write(obj.isCompletedOrPaid);
+      ..write(obj.isCompletedOrPaid)
+      //
+      ..writeByte(7)
+      ..write(obj.hasReminder)
+      //
+      ..writeByte(8)
+      ..write(obj.reminderTime?.millisecondsSinceEpoch)
+      //
+      ..writeByte(9)
+      ..write(obj.alarmSoundId);
   }
 }

@@ -8,6 +8,9 @@ class Entry {
   double? amount; // For expenses only
   DateTime date;
   bool isCompletedOrPaid;
+  bool hasReminder;
+  DateTime? reminderTime;
+  String? alarmSoundId;
 
   Entry({
     required this.id,
@@ -17,6 +20,9 @@ class Entry {
     this.amount,
     required this.date,
     this.isCompletedOrPaid = false,
+    this.hasReminder = false,
+    this.reminderTime,
+    this.alarmSoundId,
   });
 
   Entry copyWith({
@@ -27,6 +33,9 @@ class Entry {
     double? amount,
     DateTime? date,
     bool? isCompletedOrPaid,
+    bool? hasReminder,
+    DateTime? reminderTime,
+    String? alarmSoundId,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -36,6 +45,9 @@ class Entry {
       amount: amount ?? this.amount,
       date: date ?? this.date,
       isCompletedOrPaid: isCompletedOrPaid ?? this.isCompletedOrPaid,
+      hasReminder: hasReminder ?? this.hasReminder,
+      reminderTime: reminderTime ?? this.reminderTime,
+      alarmSoundId: alarmSoundId ?? this.alarmSoundId,
     );
   }
 }

@@ -78,31 +78,39 @@ class PlannerProvider with ChangeNotifier {
   }
 
   void _scheduleNotificationIfNeeded(Entry entry) {
-    if (entry.isCompletedOrPaid) {
+    if (entry.isCompletedOrPaid || !entry.hasReminder || entry.reminderTime == null) {
       try {
-        _notificationService.cancelNotification(entry.hashCode.abs());
+        _notificationService.cancelNotification(entry.id.hashCode.abs());
       } catch (e) {
         debugPrint('Failed to cancel notification: $e');
       }
       return;
     }
     
-    if (entry.type != EntryType.note) {
-      final scheduleTime = DateTime(entry.date.year, entry.date.month, entry.date.day, 9, 0);
-      String body = entry.type == EntryType.expense 
-          ? 'Unpaid Expense: \${entry.amount} for \${entry.title}'
-          : 'Pending Task: \${entry.title}';
-          
-      try {
-        _notificationService.scheduleNotification(
-          id: entry.id.hashCode.abs(),
-          title: 'Reminder',
-          body: body,
-          scheduledDate: scheduleTime,
-        );
-      } catch (e) {
-        debugPrint('Failed to schedule notification: $e');
-      }
+    if (entry.reminderTime!.isBefore(DateTime.now())) return;
+
+    String body = '';
+    switch (entry.type) {
+      case EntryType.expense:
+        body = 'Reminder: Expense \$${entry.amount} for ${entry.title}';
+        break;
+      case EntryType.todo:
+        body = 'Reminder: Task ${entry.title}';
+        break;
+      case EntryType.note:
+        body = 'Reminder: Note ${entry.title}';
+        break;
+    }
+        
+    try {
+      _notificationService.scheduleNotification(
+        id: entry.id.hashCode.abs(),
+        title: 'Planner Reminder',
+        body: body,
+        scheduledDate: entry.reminderTime!,
+      );
+    } catch (e) {
+      debugPrint('Failed to schedule notification: $e');
     }
   }
 

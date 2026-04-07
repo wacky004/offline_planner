@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 import '../models/entry.dart';
 import '../models/entry_type.dart';
 import '../providers/planner_provider.dart';
+import '../providers/music_provider.dart';
 
 class AddEntryDialog extends StatefulWidget {
   final Entry? entryToEdit;
@@ -21,6 +23,9 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
   late TextEditingController _notesController;
   late TextEditingController _amountController;
   bool _isCompletedOrPaid = false;
+  bool _hasReminder = false;
+  DateTime? _reminderTime;
+  String? _alarmSoundId;
 
   @override
   void initState() {
@@ -31,6 +36,9 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
     _notesController = TextEditingController(text: e?.notes ?? '');
     _amountController = TextEditingController(text: e?.amount?.toString() ?? '');
     _isCompletedOrPaid = e?.isCompletedOrPaid ?? false;
+    _hasReminder = e?.hasReminder ?? false;
+    _reminderTime = e?.reminderTime;
+    _alarmSoundId = e?.alarmSoundId;
   }
 
   @override
@@ -41,8 +49,99 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
     super.dispose();
   }
 
+  Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+    final initialDate = _reminderTime ?? now;
+    
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
+    );
+    if (date == null) return;
+    
+    if (!mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDate),
+    );
+    if (time == null) return;
+    
+    setState(() {
+      _reminderTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
+  }
+
+  void _showAlarmSoundPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Consumer<MusicProvider>(
+          builder: (ctx, music, _) {
+            if (music.songs.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Center(
+                  child: Text('No songs found in your local Music Library.\nGo to the Music tab to import some MP3s!', textAlign: TextAlign.center),
+                ),
+              );
+            }
+            return Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('Select Alarm Sound', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_off),
+                  title: const Text('Default System Sound'),
+                  trailing: _alarmSoundId == null ? const Icon(Icons.check, color: Colors.green) : null,
+                  onTap: () {
+                    setState(() => _alarmSoundId = null);
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const Divider(),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: music.songs.length,
+                    itemBuilder: (context, index) {
+                      final song = music.songs[index];
+                      final isSelected = _alarmSoundId == song.id;
+                      return ListTile(
+                        leading: const Icon(Icons.music_note),
+                        title: Text(song.title, maxLines: 1),
+                        trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+                        onTap: () {
+                          // Optional: we can invoke music.play(song) here to preview
+                          setState(() => _alarmSoundId = song.id);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    }
+                  ),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
   void _save() {
     if (_formKey.currentState!.validate()) {
+      if (_hasReminder && _reminderTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a reminder date/time')));
+        return;
+      }
+      if (_hasReminder && _reminderTime!.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reminder time must be in the future')));
+        return;
+      }
+
       final provider = Provider.of<PlannerProvider>(context, listen: false);
       final entry = Entry(
         id: widget.entryToEdit?.id ?? const Uuid().v4(),
@@ -52,6 +151,9 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
         amount: _type == EntryType.expense ? double.tryParse(_amountController.text) : null,
         date: widget.entryToEdit?.date ?? provider.selectedDate,
         isCompletedOrPaid: _isCompletedOrPaid,
+        hasReminder: _hasReminder,
+        reminderTime: _reminderTime,
+        alarmSoundId: _alarmSoundId,
       );
 
       if (widget.entryToEdit != null) {
@@ -73,6 +175,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<EntryType>(
                 initialValue: _type,
@@ -110,6 +213,51 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
                   onChanged: (val) => setState(() => _isCompletedOrPaid = val),
                   contentPadding: EdgeInsets.zero,
                 ),
+              const Divider(height: 32),
+              SwitchListTile(
+                title: const Text('Enable Reminder'),
+                value: _hasReminder,
+                onChanged: (val) {
+                  setState(() {
+                    _hasReminder = val;
+                    if (_hasReminder && _reminderTime == null) {
+                      _reminderTime = DateTime.now().add(const Duration(minutes: 5));
+                    }
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              if (_hasReminder) ...[
+                Card(
+                  elevation: 0,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.access_time),
+                          title: Text(_reminderTime == null ? 'Set Time' : DateFormat('MMM d, yyyy - h:mm a').format(_reminderTime!)),
+                          trailing: const Icon(Icons.edit, size: 16),
+                          onTap: _pickDateTime,
+                          dense: true,
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.music_note),
+                          title: const Text('Alarm Sound'),
+                          subtitle: Text(
+                             _alarmSoundId == null ? 'Default System Sound' : 'Custom track selected',
+                             style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                          ),
+                          trailing: const Icon(Icons.keyboard_arrow_down, size: 16),
+                          onTap: _showAlarmSoundPicker,
+                          dense: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

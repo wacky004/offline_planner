@@ -97,6 +97,20 @@ class EntryListItem extends StatelessWidget {
             if (entry.type == EntryType.expense && entry.amount != null)
               Text('${settings.currencySymbol}${entry.amount!.toStringAsFixed(2)}',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (entry.hasReminder && entry.reminderTime != null && !entry.isCompletedOrPaid)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.alarm, size: 14, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${entry.reminderTime!.month}/${entry.reminderTime!.day} @ ${entry.reminderTime!.hour}:${entry.reminderTime!.minute.toString().padLeft(2, '0')}',
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         trailing: Row(
