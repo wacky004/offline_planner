@@ -10,8 +10,9 @@ import '../providers/music_provider.dart';
 class AddEntryDialog extends StatefulWidget {
   final Entry? entryToEdit;
   final EntryType? initialType;
+  final DateTime? initialDate;
 
-  const AddEntryDialog({super.key, this.entryToEdit, this.initialType});
+  const AddEntryDialog({super.key, this.entryToEdit, this.initialType, this.initialDate});
 
   @override
   State<AddEntryDialog> createState() => _AddEntryDialogState();
@@ -150,7 +151,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
         title: _titleController.text,
         notes: _notesController.text,
         amount: _type == EntryType.expense ? double.tryParse(_amountController.text) : null,
-        date: widget.entryToEdit?.date ?? provider.selectedDate,
+        date: widget.entryToEdit?.date ?? widget.initialDate ?? provider.selectedDate,
         isCompletedOrPaid: _isCompletedOrPaid,
         hasReminder: _hasReminder,
         reminderTime: _reminderTime,
@@ -199,6 +200,9 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
               TextFormField(
                 controller: _notesController,
                 decoration: const InputDecoration(labelText: 'Notes'),
+                maxLines: null,
+                minLines: 3,
+                keyboardType: TextInputType.multiline,
               ),
               if (_type == EntryType.expense)
                 TextFormField(

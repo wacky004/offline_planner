@@ -385,12 +385,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  Widget _buildTimeBlockLayout(PlannerProvider provider, SettingsProvider settings) {
+    final dayEntries = provider.entries.where((e) => isSameDay(e.date, provider.selectedDate)).toList();
+
+    return Column(
+      children: [
+        _buildBaseTableCalendar(provider, settings, useCards: false),
+        const Divider(height: 1),
+        Expanded(
+          child: _TimeBlockTimeline(provider: provider, dayEntries: dayEntries),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<PlannerProvider, SettingsProvider>(
       builder: (context, provider, settings, child) {
         Widget bodyContent;
         switch (settings.plannerLayoutMode) {
+          case PlannerLayoutMode.timeBlock:
+            bodyContent = _buildTimeBlockLayout(provider, settings);
+            break;
           case PlannerLayoutMode.original:
             bodyContent = _buildOriginal(provider, settings);
             break;
@@ -435,6 +452,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const PopupMenuItem(
                     value: PlannerLayoutMode.original,
                     child: Text('Original Mode'),
+                  ),
+                  const PopupMenuItem(
+                    value: PlannerLayoutMode.timeBlock,
+                    child: Text('Time Block Layout'),
                   ),
                 ],
               ),
@@ -497,6 +518,153 @@ class _SectionHeader extends StatelessWidget {
           const Expanded(child: Divider(indent: 8)),
         ],
       ),
+    );
+  }
+}
+
+class _TimeBlockTimeline extends StatefulWidget {
+  final PlannerProvider provider;
+  final List<Entry> dayEntries;
+  
+  const _TimeBlockTimeline({required this.provider, required this.dayEntries});
+
+  @override
+  State<_TimeBlockTimeline> createState() => _TimeBlockTimelineState();
+}
+
+class _TimeBlockTimelineState extends State<_TimeBlockTimeline> {
+  late ScrollController _scrollController;
+  final double _slotHeight = 55.0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    int currentSlotIndex = (now.hour * 2) + (now.minute >= 30 ? 1 : 0);
+    double offset = currentSlotIndex * _slotHeight;
+    // Don't scroll past the bottom bounds
+    double maxOffset = (48 * _slotHeight) - 400; // rough visible height fallback
+    if (maxOffset < 0) maxOffset = 0;
+    if (offset > maxOffset) offset = maxOffset;
+    
+    _scrollController = ScrollController(initialScrollOffset: offset);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _addSlotEntry(BuildContext context, int hour, int minute) {
+    final sDate = widget.provider.selectedDate;
+    final slotDate = DateTime(sDate.year, sDate.month, sDate.day, hour, minute);
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text('Add at ${DateFormat('h:mm a').format(slotDate)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.note, color: Colors.blue),
+              title: const Text('Add Note'),
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(context: context, builder: (_) => AddEntryDialog(initialType: EntryType.note, initialDate: slotDate));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.attach_money, color: Colors.red),
+              title: const Text('Add Expense'),
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(context: context, builder: (_) => AddEntryDialog(initialType: EntryType.expense, initialDate: slotDate));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: const Text('Add Todo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(context: context, builder: (_) => AddEntryDialog(initialType: EntryType.todo, initialDate: slotDate));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: _scrollController,
+      itemCount: 48,
+      itemBuilder: (context, index) {
+        final hour = index ~/ 2;
+        final minute = (index % 2) * 30;
+        final slotTime = DateTime(2000, 1, 1, hour, minute);
+        
+        final slotEntries = widget.dayEntries.where((e) {
+            return e.date.hour == hour && e.date.minute >= minute && e.date.minute < minute + 30;
+        }).toList();
+
+        return InkWell(
+          onTap: () => _addSlotEntry(context, hour, minute),
+          child: Container(
+            height: _slotHeight,
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.5))),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 75,
+                  child: Center(
+                    child: Text(DateFormat('h:mm a').format(slotTime), style: TextStyle(fontSize: 12, color: Theme.of(context).disabledColor)),
+                  ),
+                ),
+                Container(width: 1, color: Theme.of(context).dividerColor),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: slotEntries.isEmpty 
+                      ? const SizedBox() 
+                      : Wrap(
+                          spacing: 4, runSpacing: 4,
+                          children: slotEntries.map((e) {
+                              IconData ic; Color c;
+                              if (e.type == EntryType.note) { ic = Icons.note; c = Colors.blue; }
+                              else if (e.type == EntryType.expense) { ic = Icons.attach_money; c = Colors.red; }
+                              else { ic = Icons.check_circle; c = Colors.green; }
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(4), border: Border.all(color: c.withOpacity(0.3))),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(ic, size: 12, color: c),
+                                    const SizedBox(width: 4),
+                                    Flexible(child: Text(e.title, style: TextStyle(fontSize: 11, color: c), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                  ]
+                                )
+                              );
+                          }).toList(),
+                      ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

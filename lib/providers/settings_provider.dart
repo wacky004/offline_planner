@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-enum PlannerLayoutMode { mainGrid, bottomExpand, original }
+enum PlannerLayoutMode { mainGrid, bottomExpand, original, timeBlock }
 
 class SettingsProvider with ChangeNotifier {
   bool _isDarkMode = false;
