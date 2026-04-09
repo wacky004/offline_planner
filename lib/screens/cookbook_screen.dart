@@ -62,6 +62,26 @@ class CookbookScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
+              if (provider.availableDynamicTags.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: provider.availableDynamicTags.map((tag) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: InputChip(
+                          label: Text(tag, style: const TextStyle(fontSize: 12)),
+                          selected: provider.selectedTags.contains(tag),
+                          onSelected: (_) => provider.toggleTag(tag),
+                          selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                          checkmarkColor: Theme.of(context).colorScheme.primary,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               
               const Divider(),
               

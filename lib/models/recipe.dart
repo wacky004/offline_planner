@@ -12,6 +12,7 @@ class Recipe {
   DateTime createdAt;
   DateTime updatedAt;
   String? imagePath;
+  List<String> tags;
 
   Recipe({
     required this.id,
@@ -25,6 +26,7 @@ class Recipe {
     required this.createdAt,
     required this.updatedAt,
     this.imagePath,
+    this.tags = const [],
   });
 
   Recipe copyWith({
@@ -39,6 +41,7 @@ class Recipe {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? imagePath,
+    List<String>? tags,
   }) {
     return Recipe(
       id: id ?? this.id,
@@ -52,6 +55,7 @@ class Recipe {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       imagePath: imagePath ?? this.imagePath,
+      tags: tags ?? this.tags,
     );
   }
 }

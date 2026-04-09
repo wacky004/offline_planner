@@ -50,6 +50,13 @@ class RecipeDetailsScreen extends StatelessWidget {
     }
   }
 
+  void _openImageFullScreen(BuildContext context, String imagePath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => _FullScreenImageViewer(imagePath: imagePath)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,9 +69,7 @@ class RecipeDetailsScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => RecipeEditorScreen(recipeToEdit: recipe)),
-              ).then((_) {
-                // Return pops when deleting from edit might happen, normally just rebuilds via provider
-              });
+              ).then((_) {});
             },
           ),
           Consumer<CookbookProvider>(
@@ -79,14 +84,12 @@ class RecipeDetailsScreen extends StatelessWidget {
       ),
       body: Consumer<CookbookProvider>(
         builder: (context, provider, child) {
-          // Attempt to find the updated recipe in case it was modified in Editor
           final updatedRecipe = provider.recipes.cast<Recipe?>().firstWhere(
             (r) => r?.id == recipe.id,
             orElse: () => null,
           );
           
           if (updatedRecipe == null) {
-            // Recipe got deleted, the pop in _confirmDelete handles navigation out
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -95,20 +98,46 @@ class RecipeDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (updatedRecipe.imagePath != null)
-                  Container(
-                    width: double.infinity,
-                    height: 250,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                    child: Image.file(
-                      File(updatedRecipe.imagePath!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  GestureDetector(
+                    onTap: () => _openImageFullScreen(context, updatedRecipe.imagePath!),
+                    child: Container(
+                      width: double.infinity,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                          Text('Image not found or moved'),
+                          Image.file(
+                            File(updatedRecipe.imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                Text('Image not found or moved'),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8, right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(16)
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.zoom_out_map, color: Colors.white, size: 16),
+                                  SizedBox(width: 4),
+                                  Text('Tap to View', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                ],
+                              )
+                            )
+                          )
                         ],
                       ),
                     ),
@@ -137,10 +166,21 @@ class RecipeDetailsScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Chip(
-                        label: Text(updatedRecipe.category.name.toUpperCase()),
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                      // Tags Section
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Chip(
+                            label: Text(updatedRecipe.category.name.toUpperCase()),
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            labelStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                          ),
+                          ...updatedRecipe.tags.map((t) => Chip(
+                            label: Text(t, style: const TextStyle(fontSize: 12)),
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          )),
+                        ],
                       ),
                       const SizedBox(height: 24),
 
@@ -193,6 +233,50 @@ class RecipeDetailsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _FullScreenImageViewer extends StatefulWidget {
+  final String imagePath;
+  const _FullScreenImageViewer({required this.imagePath});
+
+  @override
+  State<_FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
+  bool _isCover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          TextButton.icon(
+            icon: Icon(_isCover ? Icons.zoom_in_map : Icons.aspect_ratio, color: Colors.white),
+            label: Text(_isCover ? 'Contain' : 'Cover', style: const TextStyle(color: Colors.white)),
+            onPressed: () => setState(() => _isCover = !_isCover),
+          )
+        ],
+      ),
+      extendBodyBehindAppBar: true,
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4.0,
+          child: Image.file(
+            File(widget.imagePath),
+            fit: _isCover ? BoxFit.cover : BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
       ),
     );
   }

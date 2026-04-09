@@ -9,6 +9,7 @@ class CookbookProvider with ChangeNotifier {
   List<Recipe> _recipes = [];
   String _searchQuery = '';
   RecipeCategory? _selectedCategory;
+  List<String> _selectedTags = [];
 
   CookbookProvider(this._dbService) {
     _loadData();
@@ -17,12 +18,14 @@ class CookbookProvider with ChangeNotifier {
   List<Recipe> get recipes => _recipes;
   String get searchQuery => _searchQuery;
   RecipeCategory? get selectedCategory => _selectedCategory;
+  List<String> get selectedTags => _selectedTags;
 
   List<Recipe> get filteredRecipes {
     return _recipes.where((recipe) {
       final matchesSearch = recipe.title.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory = _selectedCategory == null || recipe.category == _selectedCategory;
-      return matchesSearch && matchesCategory;
+      final matchesTags = _selectedTags.isEmpty || _selectedTags.every((t) => recipe.tags.contains(t));
+      return matchesSearch && matchesCategory && matchesTags;
     }).toList();
   }
 
@@ -36,8 +39,36 @@ class CookbookProvider with ChangeNotifier {
   }
 
   void setSelectedCategory(RecipeCategory? category) {
-    _selectedCategory = category;
+    if (_selectedCategory != category) {
+      _selectedCategory = category;
+      _selectedTags.clear(); // reset tags when changing primary category
+      notifyListeners();
+    }
+  }
+
+  void toggleTag(String tag) {
+    if (_selectedTags.contains(tag)) {
+      _selectedTags.remove(tag);
+    } else {
+      _selectedTags.add(tag);
+    }
     notifyListeners();
+  }
+
+  void clearTags() {
+    _selectedTags.clear();
+    notifyListeners();
+  }
+
+  /// Extracts all unique tags used by recipes under the CURRENT selected category (or all if none selected).
+  List<String> get availableDynamicTags {
+    final baseRecipes = _recipes.where((r) => _selectedCategory == null || r.category == _selectedCategory);
+    final Set<String> tags = {};
+    for (var r in baseRecipes) {
+      tags.addAll(r.tags);
+    }
+    final sorted = tags.toList()..sort();
+    return sorted;
   }
 
   void _loadData() {

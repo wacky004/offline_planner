@@ -24,13 +24,14 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       createdAt: DateTime.fromMillisecondsSinceEpoch(fields[8] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(fields[9] as int),
       imagePath: fields[10] as String?,
+      tags: (fields[11] as List?)?.cast<String>() ?? [],
     );
   }
 
   @override
   void write(BinaryWriter writer, Recipe obj) {
     writer
-      ..writeByte(11) // Number of fields including imagePath
+      ..writeByte(12) // Number of fields including tags
       //
       ..writeByte(0)
       ..write(obj.id)
@@ -63,6 +64,9 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       ..write(obj.updatedAt.millisecondsSinceEpoch)
       //
       ..writeByte(10)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      //
+      ..writeByte(11)
+      ..write(obj.tags);
   }
 }

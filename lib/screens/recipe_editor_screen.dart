@@ -28,6 +28,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   RecipeCategory _category = RecipeCategory.ulam;
   bool _isFavorite = false;
   String? _imagePath;
+  List<String> _tags = [];
+  final TextEditingController _tagController = TextEditingController();
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _category = r?.category ?? RecipeCategory.ulam;
     _isFavorite = r?.isFavorite ?? false;
     _imagePath = r?.imagePath;
+    _tags = List.from(r?.tags ?? []);
   }
 
   @override
@@ -50,7 +53,16 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _stepsController.dispose();
     _costController.dispose();
     _notesController.dispose();
+    _tagController.dispose();
     super.dispose();
+  }
+
+  void _addTag(String value) {
+    final v = value.trim();
+    if (v.isNotEmpty && !_tags.contains(v)) {
+      setState(() => _tags.add(v));
+    }
+    _tagController.clear();
   }
 
   Future<void> _pickImage() async {
@@ -89,6 +101,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         createdAt: widget.recipeToEdit?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
         imagePath: _imagePath,
+        tags: _tags,
       );
 
       if (widget.recipeToEdit != null) {
@@ -200,6 +213,49 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
               onChanged: (val) {
                 if (val != null) setState(() => _category = val);
               },
+            ),
+            const SizedBox(height: 16),
+            // Tags Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Custom Tags', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: _tags.map((t) => Chip(
+                      label: Text(t, style: const TextStyle(fontSize: 12)),
+                      onDeleted: () => setState(() => _tags.remove(t)),
+                    )).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _tagController,
+                          decoration: const InputDecoration(
+                            hintText: 'e.g. Fish, Soup format',
+                            isDense: true,
+                          ),
+                          onSubmitted: _addTag,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, color: Colors.blue),
+                        onPressed: () => _addTag(_tagController.text),
+                      )
+                    ],
+                  )
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(
