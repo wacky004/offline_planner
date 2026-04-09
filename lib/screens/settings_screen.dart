@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/pin_service.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'pin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -46,6 +47,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: ['\$', '€', '£', '¥', '₱'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (val) {
                 if (val != null) settings.setCurrency(val);
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Default Calendar Layout'),
+            trailing: DropdownButton<CalendarFormat>(
+              value: settings.calendarFormat,
+              items: const [
+                DropdownMenuItem(value: CalendarFormat.month, child: Text('Month')),
+                DropdownMenuItem(value: CalendarFormat.twoWeeks, child: Text('Two Weeks')),
+                DropdownMenuItem(value: CalendarFormat.week, child: Text('Week')),
+              ],
+              onChanged: (val) {
+                if (val != null) settings.setCalendarFormat(val);
               },
             ),
           ),

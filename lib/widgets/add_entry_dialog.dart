@@ -9,8 +9,9 @@ import '../providers/music_provider.dart';
 
 class AddEntryDialog extends StatefulWidget {
   final Entry? entryToEdit;
+  final EntryType? initialType;
 
-  const AddEntryDialog({super.key, this.entryToEdit});
+  const AddEntryDialog({super.key, this.entryToEdit, this.initialType});
 
   @override
   State<AddEntryDialog> createState() => _AddEntryDialogState();
@@ -31,7 +32,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
   void initState() {
     super.initState();
     final e = widget.entryToEdit;
-    _type = e?.type ?? EntryType.todo;
+    _type = e?.type ?? widget.initialType ?? EntryType.todo;
     _titleController = TextEditingController(text: e?.title ?? '');
     _notesController = TextEditingController(text: e?.notes ?? '');
     _amountController = TextEditingController(text: e?.amount?.toString() ?? '');
