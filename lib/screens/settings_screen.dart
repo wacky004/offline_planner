@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../providers/settings_provider.dart';
-import '../services/auth_service.dart';
-import '../services/sync_service.dart';
 import '../services/backup_service.dart';
 import '../services/pin_service.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'pin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -31,80 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() => _pinEnabled = enabled);
   }
 
-  // ─── Sync Helpers ──────────────────────────────────────────────────────────
-
-  Future<void> _handleSignIn() async {
-    final authService = context.read<AuthService>();
-    // signInWithGoogle opens the OAuth browser flow and returns true if launched.
-    final started = await authService.signInWithGoogle();
-    if (!mounted) return;
-    if (started) {
-      await context.read<SettingsProvider>().setUserMode(UserMode.sync);
-      context.read<SyncService>().syncAll();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign-in started! Sync will begin once you return.')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign-in failed to start. Please try again.')),
-      );
-    }
-  }
-
-  Future<void> _handleSignOut() async {
-    final confirmed = await _showConfirmDialog(
-      'Sign Out',
-      'Your local data will remain on this device. Cloud sync will stop until you sign in again.',
-    );
-    if (!confirmed || !mounted) return;
-    await context.read<AuthService>().signOut();
-    await context.read<SettingsProvider>().setUserMode(UserMode.guest);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed out. App is now in Guest Mode.')),
-      );
-    }
-  }
-
-  Future<void> _handleSyncNow() async {
-    final syncService = context.read<SyncService>();
-    await syncService.syncAll();
-    if (mounted) {
-      await context.read<SettingsProvider>().recordSyncTime();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync complete!')),
-      );
-    }
-  }
-
-  // ─── Backup Helpers ────────────────────────────────────────────────────────
-
-  Future<void> _handleExport(BackupService backupService) async {
-    final path = await backupService.exportBackup();
-    if (!mounted) return;
-    if (path != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Backup saved to:\n$path'), duration: const Duration(seconds: 4)),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Export failed. Please try again.')),
-      );
-    }
-  }
-
-  Future<void> _handleImport(BackupService backupService) async {
-    final confirmed = await _showConfirmDialog(
-      'Import Backup',
-      'New data from the backup file will be merged into your existing local data. This will NOT delete your current data.',
-    );
-    if (!confirmed || !mounted) return;
-    final success = await backupService.importBackup();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? '✅ Backup imported successfully!' : '❌ Import failed. Check the file format.')),
-    );
-  }
+  // ─── Confirmation dialog helper ───────────────────────────────────────────
 
   Future<bool> _showConfirmDialog(String title, String message) async {
     final result = await showDialog<bool>(
@@ -113,33 +38,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continue')),
         ],
       ),
     );
     return result ?? false;
   }
 
-  // ─── Build ─────────────────────────────────────────────────────────────────
+  // ─── Sync & Backup actions ────────────────────────────────────────────────
+
+  Future<void> _handleSyncAndBackup(SyncBackupService service) async {
+    await service.syncAndBackup();
+    if (!mounted) return;
+    final msg = switch (service.status) {
+      SyncStatus.success => '✅ Backup complete! Data saved locally.',
+      SyncStatus.failed  =>
+        '❌ Backup failed: ${service.lastError ?? 'Unknown error'}',
+      _ => '',
+    };
+    if (msg.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleRestoreFromLocal(SyncBackupService service) async {
+    final hasBackup = await service.localBackupExists;
+    if (!mounted) return;
+
+    if (!hasBackup) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No local backup found. Run "Sync & Backup" first.')),
+      );
+      return;
+    }
+
+    final confirmed = await _showConfirmDialog(
+      'Restore from Backup',
+      'This will merge your latest local backup into the current database. '
+      'Newer records on this device will not be overwritten. Continue?',
+    );
+    if (!confirmed || !mounted) return;
+
+    final ok = await service.restoreFromLocalBackup();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? '✅ Restore complete!' : '❌ Restore failed.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleImportFromFile(SyncBackupService service) async {
+    final confirmed = await _showConfirmDialog(
+      'Import from File',
+      'Pick a planner_backup.json file to merge into your local database. '
+      'Records with a newer "updatedAt" date will overwrite older ones.',
+    );
+    if (!confirmed || !mounted) return;
+
+    final ok = await service.importFromFile();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? '✅ Import successful!' : '❌ Import failed. Check the file.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    final authService = context.watch<AuthService>();
-    final syncService = context.watch<SyncService>();
-    final backupService = context.read<BackupService>();
-
-    final isSignedIn = authService.isSignedIn;
-    final isSyncMode = settings.userMode == UserMode.sync;
-    final user = authService.currentUser;
-    final lastSync = settings.lastSyncTime;
+    final backup = context.watch<SyncBackupService>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          // ── Appearance ───────────────────────────────────────────────────
+          // ── Appearance ──────────────────────────────────────────────────
           _sectionHeader('Appearance'),
           SwitchListTile(
             title: const Text('Dark Mode'),
@@ -148,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (val) => settings.toggleDarkMode(),
           ),
 
-          // ── Calendar & Layout ────────────────────────────────────────────
+          // ── Calendar & Layout ───────────────────────────────────────────
           _sectionHeader('Calendar & Layout'),
           ListTile(
             leading: const Icon(Icons.attach_money),
@@ -171,9 +161,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: settings.calendarFormat,
               underline: const SizedBox(),
               items: const [
-                DropdownMenuItem(value: CalendarFormat.month, child: Text('Month')),
-                DropdownMenuItem(value: CalendarFormat.twoWeeks, child: Text('Two Weeks')),
-                DropdownMenuItem(value: CalendarFormat.week, child: Text('Week')),
+                DropdownMenuItem(
+                    value: CalendarFormat.month, child: Text('Month')),
+                DropdownMenuItem(
+                    value: CalendarFormat.twoWeeks, child: Text('Two Weeks')),
+                DropdownMenuItem(
+                    value: CalendarFormat.week, child: Text('Week')),
               ],
               onChanged: (val) {
                 if (val != null) settings.setCalendarFormat(val);
@@ -194,7 +187,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (!hasSetup) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const PinScreen(isSettingUp: true)),
+                    MaterialPageRoute(
+                        builder: (_) => const PinScreen(isSettingUp: true)),
                   ).then((_) => _loadPinStatus());
                 } else {
                   await _pinService.togglePinLock(true);
@@ -213,86 +207,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const PinScreen(isSettingUp: true)),
+                MaterialPageRoute(
+                    builder: (_) => const PinScreen(isSettingUp: true)),
               ).then((_) => _loadPinStatus());
             },
           ),
 
-          // ── Account & Sync ────────────────────────────────────────────────
-          _sectionHeader('Account & Sync'),
-
-          // Mode badge
-          ListTile(
-            leading: Icon(
-              isSyncMode ? Icons.cloud_done : Icons.phonelink_off,
-              color: isSyncMode ? Colors.green : Colors.grey,
-            ),
-            title: Text(isSyncMode ? 'Sync Mode' : 'Guest Mode (Offline Only)'),
-            subtitle: Text(
-              isSyncMode
-                  ? (user?.email ?? 'Signed in')
-                  : 'No account • All data stays on this device',
-            ),
+          // ── Backup & Sync ─────────────────────────────────────────────────
+          _sectionHeader('Backup & Sync'),
+          _SyncBackupCard(
+            service: backup,
+            onSyncAndBackup: () => _handleSyncAndBackup(backup),
+            onRestoreFromLocal: () => _handleRestoreFromLocal(backup),
+            onImportFromFile: () => _handleImportFromFile(backup),
           ),
 
-          // Last sync time
-          if (isSyncMode && lastSync != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Last synced: ${DateFormat('MMM d, yyyy – h:mm a').format(lastSync)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-              ),
-            ),
-
-          const SizedBox(height: 4),
-
-          // Sync Now
-          if (isSyncMode)
-            ListTile(
-              leading: syncService.isSyncing
-                  ? const SizedBox(
-                      width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.sync),
-              title: const Text('Sync Now'),
-              subtitle: const Text('Push local changes to cloud and pull updates'),
-              onTap: syncService.isSyncing ? null : _handleSyncNow,
-            ),
-
-          // Sign in / Sign out
-          if (!isSignedIn)
-            ListTile(
-              leading: const Icon(Icons.login),
-              title: const Text('Sign in with Google to Enable Sync'),
-              subtitle: const Text('Opens Google sign-in via Supabase — syncs calendar, goals, cookbook & Bible'),
-              onTap: _handleSignIn,
-            )
-          else
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
-              subtitle: const Text('App will continue in Guest Mode with local data'),
-              onTap: _handleSignOut,
-            ),
-
-          // ── Backup & Restore ──────────────────────────────────────────────
-          _sectionHeader('Backup & Restore'),
-          ListTile(
-            leading: const Icon(Icons.upload_file),
-            title: const Text('Export Local Backup'),
-            subtitle: const Text('Save all data to a JSON file on your device'),
-            onTap: () => _handleExport(backupService),
-          ),
-          ListTile(
-            leading: const Icon(Icons.download_for_offline),
-            title: const Text('Import from Backup'),
-            subtitle: const Text('Merge data from a JSON backup file'),
-            onTap: () => _handleImport(backupService),
-          ),
-
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -310,4 +240,253 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Premium Sync & Backup card widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SyncBackupCard extends StatelessWidget {
+  final SyncBackupService service;
+  final VoidCallback onSyncAndBackup;
+  final VoidCallback onRestoreFromLocal;
+  final VoidCallback onImportFromFile;
+
+  const _SyncBackupCard({
+    required this.service,
+    required this.onSyncAndBackup,
+    required this.onRestoreFromLocal,
+    required this.onImportFromFile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Status visuals
+    final (statusText, statusIcon, statusColor) = switch (service.status) {
+      SyncStatus.idle    => ('Idle', Icons.cloud_upload_outlined, cs.onSurface.withValues(alpha: 0.5)),
+      SyncStatus.syncing => ('Syncing…', Icons.sync, cs.primary),
+      SyncStatus.success => ('Backup complete', Icons.cloud_done_outlined, Colors.green),
+      SyncStatus.failed  => ('Failed', Icons.cloud_off_outlined, Colors.redAccent),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        elevation: 0,
+        color: isDark
+            ? cs.surfaceContainerHighest
+            : cs.primaryContainer.withValues(alpha: 0.35),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header row ─────────────────────────────────────────────
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.backup_rounded, color: cs.primary, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Local Backup', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(
+                          'All data saved as planner_backup.json',
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Status row ─────────────────────────────────────────────
+              Row(
+                children: [
+                  if (service.status == SyncStatus.syncing)
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.primary,
+                      ),
+                    )
+                  else
+                    Icon(statusIcon, size: 16, color: statusColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    statusText,
+                    style: tt.bodySmall?.copyWith(color: statusColor, fontWeight: FontWeight.w600),
+                  ),
+                  if (service.lastSync != null) ...[
+                    Text(
+                      '  ·  Last: ${DateFormat('MMM d, h:mm a').format(service.lastSync!)}',
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── PRIMARY BUTTON: Sync & Backup ──────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: service.isSyncing ? null : onSyncAndBackup,
+                  icon: service.isSyncing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Icon(Icons.cloud_sync_rounded),
+                  label: Text(
+                    service.isSyncing ? 'Backing up…' : 'Sync & Backup',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // ── Google Drive toggle ────────────────────────────────────
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: Icon(Icons.drive_file_rename_outline_rounded,
+                    color: service.driveEnabled ? cs.primary : cs.onSurface.withValues(alpha: 0.4),
+                    size: 20),
+                title: Text(
+                  'Enable Google Drive Sync',
+                  style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  service.driveEnabled
+                      ? 'Upload & download on each backup'
+                      : 'Off — local backup only',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5)),
+                ),
+                value: service.driveEnabled,
+                onChanged: (val) => service.setDriveEnabled(val),
+              ),
+
+              const Divider(height: 24),
+
+              // ── Secondary actions ──────────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: _SecondaryActionButton(
+                      icon: Icons.restore_rounded,
+                      label: 'Restore',
+                      onTap: service.isSyncing ? null : onRestoreFromLocal,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _SecondaryActionButton(
+                      icon: Icons.file_open_rounded,
+                      label: 'Import File',
+                      onTap: service.isSyncing ? null : onImportFromFile,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // ── Includes badge ─────────────────────────────────────────
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  'Calendar', 'Expenses', 'Goals', 'Cookbook', 'Bible',
+                ].map((label) => _Chip(label)).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _SecondaryActionButton({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        side: BorderSide(color: cs.outline.withValues(alpha: 0.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  const _Chip(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: cs.primary,
+        ),
+      ),
+    );
+  }
 }

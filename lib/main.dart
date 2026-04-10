@@ -7,8 +7,9 @@ import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/pin_service.dart';
 import 'services/auth_service.dart';
-import 'services/sync_service.dart';
-import 'services/backup_service.dart';
+import 'services/sync_service.dart' show SyncService;
+import 'services/backup_service.dart' show SyncBackupService;
+
 import 'providers/planner_provider.dart';
 import 'providers/cookbook_provider.dart';
 import 'providers/bible_provider.dart';
@@ -56,8 +57,9 @@ void main() async {
           create: (ctx) => SyncService(dbService, ctx.read<AuthService>()),
           update: (ctx, auth, prev) => prev ?? SyncService(dbService, auth),
         ),
-        // BackupService as plain Provider (not ChangeNotifier)
-        Provider<BackupService>(create: (_) => BackupService(dbService)),
+        // SyncBackupService is a ChangeNotifier for live status updates
+        ChangeNotifierProvider<SyncBackupService>(create: (_) => SyncBackupService(dbService)),
+
       ],
       child: const PlannerApp(),
     ),
