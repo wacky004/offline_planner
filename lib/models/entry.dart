@@ -11,6 +11,7 @@ class Entry {
   bool hasReminder;
   DateTime? reminderTime;
   String? alarmSoundId;
+  DateTime updatedAt;
 
   Entry({
     required this.id,
@@ -23,7 +24,8 @@ class Entry {
     this.hasReminder = false,
     this.reminderTime,
     this.alarmSoundId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   Entry copyWith({
     String? id,
@@ -36,6 +38,7 @@ class Entry {
     bool? hasReminder,
     DateTime? reminderTime,
     String? alarmSoundId,
+    DateTime? updatedAt,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -48,6 +51,7 @@ class Entry {
       hasReminder: hasReminder ?? this.hasReminder,
       reminderTime: reminderTime ?? this.reminderTime,
       alarmSoundId: alarmSoundId ?? this.alarmSoundId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

@@ -16,13 +16,14 @@ class GoalAdapter extends TypeAdapter<Goal> {
       title: fields[1] as String,
       targetAmount: fields[2] as double,
       currentAmount: fields[3] as double,
+      updatedAt: fields[4] != null ? DateTime.fromMillisecondsSinceEpoch(fields[4] as int) : DateTime.now(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Goal obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       //
       ..writeByte(0)
       ..write(obj.id)
@@ -34,6 +35,9 @@ class GoalAdapter extends TypeAdapter<Goal> {
       ..write(obj.targetAmount)
       //
       ..writeByte(3)
-      ..write(obj.currentAmount);
+      ..write(obj.currentAmount)
+      //
+      ..writeByte(4)
+      ..write(obj.updatedAt.millisecondsSinceEpoch);
   }
 }

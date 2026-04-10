@@ -1,0 +1,51 @@
+﻿Analyzing offline_planner_fixed...                              
+
+warning - The URI 'package:flutter_lints/flutter.yaml' included in 'C:\Users\Dev1\.gemini\antigravity\scratch\offline_planner_fixed\analysis_options.yaml' can't be found when analyzing 'C:\Users\Dev1\.gemini\antigravity\scratch\offline_planner_fixed' - analysis_options.yaml:10:10 - include_file_not_found
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:172:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:176:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:188:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:354:66 - deprecated_member_use
+warning - This default clause is covered by the previous cases - lib\screens\calendar_screen.dart:418:11 - unreachable_switch_default
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:623:87 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:649:68 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\calendar_screen.dart:649:154 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\goals_screen.dart:122:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mode_selection_screen.dart:104:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mode_selection_screen.dart:127:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\mode_selection_screen.dart:174:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pin_screen.dart:90:102 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pin_screen.dart:129:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\settings_screen.dart:244:70 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\summary_screen.dart:84:78 - deprecated_member_use
+  error - The getter 'verses' isn't defined for the type 'BibleProvider' - lib\screens\verse_details_screen.dart:40:39 - undefined_getter
+  error - The named parameter 'book' is required, but there's no corresponding argument - lib\screens\verse_details_screen.dart:58:79 - missing_required_argument
+  error - The named parameter 'chapter' is required, but there's no corresponding argument - lib\screens\verse_details_screen.dart:58:79 - missing_required_argument
+  error - The class 'GoogleSignIn' doesn't have an unnamed constructor - lib\services\auth_service.dart:7:38 - new_with_undefined_constructor_default
+  error - The method 'signIn' isn't defined for the type 'GoogleSignIn' - lib\services\auth_service.dart:20:67 - undefined_method
+  error - The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication' - lib\services\auth_service.dart:25:33 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\entry_list_item.dart:81:34 - deprecated_member_use
+  error - The method 'removeAnnotation' isn't defined for the type 'BibleProvider' - lib\widgets\verse_action_bottom_sheet.dart:50:16 - undefined_method
+  error - The named parameter 'chapterId' is required, but there's no corresponding argument - lib\widgets\verse_action_bottom_sheet.dart:55:24 - missing_required_argument
+  error - The named parameter 'bookName' isn't defined - lib\widgets\verse_action_bottom_sheet.dart:58:7 - undefined_named_parameter
+  error - The named parameter 'chapterNumber' isn't defined - lib\widgets\verse_action_bottom_sheet.dart:59:7 - undefined_named_parameter
+  error - The method 'saveAnnotation' isn't defined for the type 'BibleProvider' - lib\widgets\verse_action_bottom_sheet.dart:68:14 - undefined_method
+  error - The argument type 'SavedVerse' can't be assigned to the parameter type 'BibleVerse'.  - lib\widgets\verse_list_item.dart:96:62 - argument_type_not_assignable
+
+flutter : 30 issues 
+found. (ran in 4.2s)
+At line:1 char:1
++ flutter analyze 
+--no-pub 2>&1 | Out-File 
+-FilePath 
+analyze_out2.txt - ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo        
+      : NotSpecified: (3  
+  0 issues found. (ran    
+ in 4.2s):String) [],     
+RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 

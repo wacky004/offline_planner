@@ -1,0 +1,25 @@
+﻿Analyzing 6 items...                                            
+
+  error - The method 'execute' isn't defined for the type 'PostgrestFilterBuilder' - lib\services\sync_service.dart:147:10 - undefined_method
+  error - The method 'execute' isn't defined for the type 'PostgrestFilterBuilder' - lib\services\sync_service.dart:174:53 - undefined_method
+  error - The method 'execute' isn't defined for the type 'PostgrestFilterBuilder' - lib\services\sync_service.dart:181:51 - undefined_method
+
+flutter : 3 issues found. 
+(ran in 10.2s)
+At line:1 char:1
++ flutter analyze 
+lib/main.dart lib/config/s
+upabase_config.dart 
+lib/ser ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (3  
+   issues found. (ran i   
+ n 10.2s):String) [],     
+RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 

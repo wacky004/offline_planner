@@ -4,11 +4,16 @@ import 'package:table_calendar/table_calendar.dart';
 
 enum PlannerLayoutMode { mainGrid, bottomExpand, original, timeBlock }
 
+/// 'guest' = fully offline, 'sync' = signed-in + Firestore sync
+enum UserMode { guest, sync }
+
 class SettingsProvider with ChangeNotifier {
   bool _isDarkMode = false;
   String _currencySymbol = '\$';
   CalendarFormat _calendarFormat = CalendarFormat.month;
   PlannerLayoutMode _plannerLayoutMode = PlannerLayoutMode.mainGrid;
+  UserMode _userMode = UserMode.guest;
+  DateTime? _lastSyncTime;
 
   SettingsProvider() {
     _loadSettings();
@@ -18,12 +23,14 @@ class SettingsProvider with ChangeNotifier {
   String get currencySymbol => _currencySymbol;
   CalendarFormat get calendarFormat => _calendarFormat;
   PlannerLayoutMode get plannerLayoutMode => _plannerLayoutMode;
+  UserMode get userMode => _userMode;
+  DateTime? get lastSyncTime => _lastSyncTime;
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = prefs.getBool('dark_mode') ?? false;
     _currencySymbol = prefs.getString('currency') ?? '\$';
-    
+
     final viewIdx = prefs.getInt('calendar_format');
     if (viewIdx != null && viewIdx >= 0 && viewIdx < CalendarFormat.values.length) {
       _calendarFormat = CalendarFormat.values[viewIdx];
@@ -33,7 +40,15 @@ class SettingsProvider with ChangeNotifier {
     if (modeIdx != null && modeIdx >= 0 && modeIdx < PlannerLayoutMode.values.length) {
       _plannerLayoutMode = PlannerLayoutMode.values[modeIdx];
     }
-    
+
+    final userModeStr = prefs.getString('user_mode') ?? 'guest';
+    _userMode = userModeStr == 'sync' ? UserMode.sync : UserMode.guest;
+
+    final lastSync = prefs.getInt('last_sync_time');
+    if (lastSync != null) {
+      _lastSyncTime = DateTime.fromMillisecondsSinceEpoch(lastSync);
+    }
+
     notifyListeners();
   }
 
@@ -64,4 +79,19 @@ class SettingsProvider with ChangeNotifier {
     await prefs.setInt('planner_layout_mode', mode.index);
     notifyListeners();
   }
+
+  Future<void> setUserMode(UserMode mode) async {
+    _userMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_mode', mode == UserMode.sync ? 'sync' : 'guest');
+    notifyListeners();
+  }
+
+  Future<void> recordSyncTime() async {
+    _lastSyncTime = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_sync_time', _lastSyncTime!.millisecondsSinceEpoch);
+    notifyListeners();
+  }
 }
+
