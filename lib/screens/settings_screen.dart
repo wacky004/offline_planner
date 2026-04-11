@@ -6,6 +6,7 @@ import '../providers/settings_provider.dart';
 import '../services/backup_service.dart';
 import '../services/drive_service.dart';
 import '../services/pin_service.dart';
+import '../widgets/app_drawer.dart';
 import 'pin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -147,6 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final drive = context.watch<DriveService>();
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [

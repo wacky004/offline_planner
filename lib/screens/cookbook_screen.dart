@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/recipe_category.dart';
 import '../providers/cookbook_provider.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/recipe_list_item.dart';
 import 'recipe_editor_screen.dart';
 
@@ -11,6 +12,7 @@ class CookbookScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Cookbook'),
       ),
