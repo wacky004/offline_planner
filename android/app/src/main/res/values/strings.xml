@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REQUIRED: Replace the value below with your real OAuth 2.0 Web Client ID
+  from Google Cloud Console.
+
+  Steps:
+  1. Go to https://console.cloud.google.com
+  2. Create or select a project
+  3. Enable the Google Drive API
+  4. Go to Credentials → Create Credentials → OAuth 2.0 Client ID
+     - Application type: Android
+     - Package name: com.example.offline_planner_fixed
+     - SHA-1 fingerprint (from: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)
+  5. Also create a Web Application client ID → copy that value below
+  6. Replace YOUR_WEB_CLIENT_ID_HERE with the actual value
+-->
+<resources>
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+</resources>

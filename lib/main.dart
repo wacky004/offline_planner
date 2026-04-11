@@ -8,7 +8,8 @@ import 'services/notification_service.dart';
 import 'services/pin_service.dart';
 import 'services/auth_service.dart';
 import 'services/sync_service.dart' show SyncService;
-import 'services/backup_service.dart' show SyncBackupService;
+import 'services/backup_service.dart' show BackupService;
+import 'services/drive_service.dart' show DriveService;
 
 import 'providers/planner_provider.dart';
 import 'providers/cookbook_provider.dart';
@@ -57,8 +58,13 @@ void main() async {
           create: (ctx) => SyncService(dbService, ctx.read<AuthService>()),
           update: (ctx, auth, prev) => prev ?? SyncService(dbService, auth),
         ),
-        // SyncBackupService is a ChangeNotifier for live status updates
-        ChangeNotifierProvider<SyncBackupService>(create: (_) => SyncBackupService(dbService)),
+        // DriveService must come before BackupService (BackupService depends on it)
+        ChangeNotifierProvider<DriveService>(create: (_) => DriveService()),
+        // BackupService orchestrates local + Drive sync
+        ChangeNotifierProxyProvider<DriveService, BackupService>(
+          create: (ctx) => BackupService(dbService, ctx.read<DriveService>()),
+          update: (ctx, drv, prev) => prev ?? BackupService(dbService, drv),
+        ),
 
       ],
       child: const PlannerApp(),
