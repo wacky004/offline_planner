@@ -12,6 +12,7 @@ class Entry {
   DateTime? reminderTime;
   String? alarmSoundId;
   DateTime updatedAt;
+  List<String> receiptPaths;
 
   Entry({
     required this.id,
@@ -25,7 +26,9 @@ class Entry {
     this.reminderTime,
     this.alarmSoundId,
     DateTime? updatedAt,
-  }) : updatedAt = updatedAt ?? DateTime.now();
+    List<String>? receiptPaths,
+  })  : updatedAt = updatedAt ?? DateTime.now(),
+        receiptPaths = receiptPaths ?? [];
 
   Entry copyWith({
     String? id,
@@ -39,6 +42,7 @@ class Entry {
     DateTime? reminderTime,
     String? alarmSoundId,
     DateTime? updatedAt,
+    List<String>? receiptPaths,
   }) {
     return Entry(
       id: id ?? this.id,
@@ -52,6 +56,7 @@ class Entry {
       reminderTime: reminderTime ?? this.reminderTime,
       alarmSoundId: alarmSoundId ?? this.alarmSoundId,
       updatedAt: updatedAt ?? this.updatedAt,
+      receiptPaths: receiptPaths ?? this.receiptPaths,
     );
   }
 }

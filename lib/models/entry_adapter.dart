@@ -24,13 +24,14 @@ class EntryAdapter extends TypeAdapter<Entry> {
       reminderTime: fields[8] != null ? DateTime.fromMillisecondsSinceEpoch(fields[8] as int) : null,
       alarmSoundId: fields[9] as String?,
       updatedAt: fields[10] != null ? DateTime.fromMillisecondsSinceEpoch(fields[10] as int) : DateTime.now(),
+      receiptPaths: (fields[11] as List?)?.cast<String>() ?? [],
     );
   }
 
   @override
   void write(BinaryWriter writer, Entry obj) {
     writer
-      ..writeByte(11) // Num of fields
+      ..writeByte(12) // Num of fields
       //
       ..writeByte(0)
       ..write(obj.id)
@@ -63,6 +64,9 @@ class EntryAdapter extends TypeAdapter<Entry> {
       ..write(obj.alarmSoundId)
       //
       ..writeByte(10)
-      ..write(obj.updatedAt.millisecondsSinceEpoch);
+      ..write(obj.updatedAt.millisecondsSinceEpoch)
+      //
+      ..writeByte(11)
+      ..write(obj.receiptPaths);
   }
 }

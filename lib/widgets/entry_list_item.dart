@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/entry.dart';
 import '../models/entry_type.dart';
 import '../providers/planner_provider.dart';
 import '../providers/settings_provider.dart';
+import '../screens/receipt_preview_screen.dart';
 import 'add_entry_dialog.dart';
 
 class EntryListItem extends StatelessWidget {
@@ -109,6 +111,24 @@ class EntryListItem extends StatelessWidget {
                       style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
                     ),
                   ],
+                ),
+              ),
+            if (entry.type == EntryType.expense && entry.receiptPaths.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: entry.receiptPaths.map((path) => GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReceiptPreviewScreen(imagePath: path))),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(path), width: 48, height: 48, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: Colors.grey, child: const Icon(Icons.broken_image, size: 24)),
+                      ),
+                    ),
+                  )).toList(),
                 ),
               ),
           ],

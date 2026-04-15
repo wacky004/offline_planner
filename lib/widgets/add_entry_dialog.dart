@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -6,6 +7,8 @@ import '../models/entry.dart';
 import '../models/entry_type.dart';
 import '../providers/planner_provider.dart';
 import '../providers/music_provider.dart';
+import '../services/scanner_service.dart';
+import '../screens/receipt_preview_screen.dart';
 
 class AddEntryDialog extends StatefulWidget {
   final Entry? entryToEdit;
@@ -28,6 +31,8 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
   bool _hasReminder = false;
   DateTime? _reminderTime;
   String? _alarmSoundId;
+  List<String> _receiptPaths = [];
+  final ScannerService _scannerService = ScannerService();
 
   @override
   void initState() {
@@ -41,6 +46,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
     _hasReminder = e?.hasReminder ?? false;
     _reminderTime = e?.reminderTime;
     _alarmSoundId = e?.alarmSoundId;
+    _receiptPaths = List.from(e?.receiptPaths ?? []);
   }
 
   @override
@@ -156,6 +162,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
         hasReminder: _hasReminder,
         reminderTime: _reminderTime,
         alarmSoundId: _alarmSoundId,
+        receiptPaths: _receiptPaths,
       );
 
       if (widget.entryToEdit != null) {
@@ -204,13 +211,94 @@ class _AddEntryDialogState extends State<AddEntryDialog> {
                 minLines: 3,
                 keyboardType: TextInputType.multiline,
               ),
-              if (_type == EntryType.expense)
+              if (_type == EntryType.expense) ...[
                 TextFormField(
                   controller: _amountController,
                   decoration: const InputDecoration(labelText: 'Amount'),
                   keyboardType: TextInputType.number,
                   validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                 ),
+                const SizedBox(height: 16),
+                const Text('Receipts', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (_receiptPaths.isNotEmpty)
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _receiptPaths.length,
+                      itemBuilder: (context, index) {
+                        final path = _receiptPaths[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReceiptPreviewScreen(imagePath: path))),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(path), 
+                                    width: 100, 
+                                    height: 100, 
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(width: 100, height: 100, color: Colors.grey, child: const Icon(Icons.broken_image)),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _receiptPaths.removeAt(index);
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final path = await _scannerService.scanReceipt(fromCamera: true);
+                          if (path != null) setState(() => _receiptPaths.add(path));
+                        },
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Scan'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final path = await _scannerService.scanReceipt(fromCamera: false);
+                          if (path != null) setState(() => _receiptPaths.add(path));
+                        },
+                        icon: const Icon(Icons.image),
+                        label: const Text('Gallery'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
               if (_type != EntryType.note)
                 SwitchListTile(
                   title: Text(_type == EntryType.expense ? 'Paid' : 'Completed'),
