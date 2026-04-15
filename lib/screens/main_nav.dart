@@ -7,6 +7,7 @@ import 'cookbook_screen.dart';
 import 'bible_screen.dart';
 import 'music_screen.dart';
 import 'calculator_screen.dart';
+import 'health_screen.dart';
 import 'settings_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ class MainNav extends StatefulWidget {
   State<MainNav> createState() => _MainNavState();
 }
 
-enum _NavItem {
+enum NavItem {
   dashboard('Dashboard', Icons.dashboard_rounded),
   calendar('Planner', Icons.calendar_month_rounded),
   summary('Summary', Icons.pie_chart_rounded),
@@ -32,94 +33,53 @@ enum _NavItem {
   cookbook('Cookbook', Icons.restaurant_menu_rounded),
   bible('Bible', Icons.menu_book_rounded),
   music('Music', Icons.library_music_rounded),
+  health('Health', Icons.monitor_heart_rounded),
   calculator('Calculator', Icons.calculate_rounded),
   settings('Settings', Icons.settings_rounded);
 
   final String label;
   final IconData icon;
-  const _NavItem(this.label, this.icon);
+  const NavItem(this.label, this.icon);
 }
 
 class _MainNavState extends State<MainNav> {
-  _NavItem _current = _NavItem.dashboard;
+  NavItem _current = NavItem.dashboard;
 
   Widget _buildScreen() {
     switch (_current) {
-      case _NavItem.dashboard:
+      case NavItem.dashboard:
         return const DashboardScreen();
-      case _NavItem.calendar:
+      case NavItem.calendar:
         return const CalendarScreen();
-      case _NavItem.summary:
+      case NavItem.summary:
         return const SummaryScreen();
-      case _NavItem.goals:
+      case NavItem.goals:
         return const GoalsScreen();
-      case _NavItem.cookbook:
+      case NavItem.cookbook:
         return const CookbookScreen();
-      case _NavItem.bible:
+      case NavItem.bible:
         return const BibleScreen();
-      case _NavItem.music:
+      case NavItem.music:
         return const MusicScreen();
-      case _NavItem.calculator:
+      case NavItem.health:
+        return const HealthScreen();
+      case NavItem.calculator:
         return const CalculatorScreen();
-      case _NavItem.settings:
+      case NavItem.settings:
         return const SettingsScreen();
     }
   }
 
-  /// Returns true if the screen builds its own Scaffold + AppBar.
-  bool get _screenHasOwnScaffold {
-    switch (_current) {
-      case _NavItem.calendar:
-      case _NavItem.summary:
-      case _NavItem.goals:
-      case _NavItem.cookbook:
-      case _NavItem.bible:
-      case _NavItem.music:
-      case _NavItem.calculator:
-      case _NavItem.settings:
-        return true;
-      case _NavItem.dashboard:
-        return false;
-    }
-  }
-
-  void _navigateTo(_NavItem item) {
+  void _navigateTo(NavItem item) {
     setState(() => _current = item);
-    Navigator.pop(context); // close drawer
   }
 
   @override
   Widget build(BuildContext context) {
-    final body = _buildScreen();
-
-    // Screens that already have their own Scaffold are shown directly.
-    // Dashboard has no Scaffold yet, so we wrap it.
-    if (_screenHasOwnScaffold) {
-      // We still need the drawer accessible from those screens.
-      // Those screens already use AppDrawer or have their own app bars.
-      // We'll replace their drawers globally via the new AppDrawer that calls back here.
-      return _MainNavInherited(
-        navigateTo: _navigateTo,
-        currentItem: _current,
-        child: body,
-      );
-    }
-
-    return _MainNavInherited(
+    return MainNavInherited(
       navigateTo: _navigateTo,
       currentItem: _current,
-      child: Scaffold(
-        drawer: _buildDrawer(context),
-        appBar: AppBar(title: const Text('Dashboard')),
-        body: body,
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return _AppNavigationDrawer(
-      currentItem: _current,
-      onSelect: _navigateTo,
+      child: _buildScreen(),
     );
   }
 }
@@ -128,19 +88,24 @@ class _MainNavState extends State<MainNav> {
 // InheritedWidget to pass navigation callback down the tree
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MainNavInherited extends InheritedWidget {
-  final void Function(_NavItem) navigateTo;
-  final _NavItem currentItem;
+class MainNavInherited extends InheritedWidget {
+  final void Function(NavItem) navigateTo;
+  final NavItem currentItem;
 
-  const _MainNavInherited({
+  const MainNavInherited({
+    super.key,
     required this.navigateTo,
     required this.currentItem,
     required super.child,
   });
 
+  static MainNavInherited? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<MainNavInherited>();
+  }
+
   @override
-  bool updateShouldNotify(_MainNavInherited old) =>
-      currentItem != old.currentItem;
+  bool updateShouldNotify(MainNavInherited oldWidget) =>
+      currentItem != oldWidget.currentItem;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -148,10 +113,11 @@ class _MainNavInherited extends InheritedWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _AppNavigationDrawer extends StatelessWidget {
-  final _NavItem currentItem;
-  final void Function(_NavItem) onSelect;
+  final NavItem currentItem;
+  final void Function(NavItem) onSelect;
 
   const _AppNavigationDrawer({
+    super.key,
     required this.currentItem,
     required this.onSelect,
   });
@@ -181,7 +147,11 @@ class _AppNavigationDrawer extends StatelessWidget {
                     color: cs.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.event_note_rounded, size: 32, color: cs.primary),
+                  child: Icon(
+                    Icons.event_note_rounded,
+                    size: 32,
+                    color: cs.primary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -204,22 +174,22 @@ class _AppNavigationDrawer extends StatelessWidget {
             ),
           ),
 
-          // Main navigation items
-          ..._NavItem.values.where((v) => v != _NavItem.settings).map(
-            (item) => _DrawerTile(
-              item: item,
-              isSelected: currentItem == item,
-              onTap: () => onSelect(item),
-            ),
-          ),
+          ...NavItem.values
+              .where((v) => v != NavItem.settings)
+              .map(
+                (item) => _DrawerTile(
+                  item: item,
+                  isSelected: currentItem == item,
+                  onTap: () => onSelect(item),
+                ),
+              ),
 
           const Divider(indent: 16, endIndent: 16),
 
-          // Settings at the bottom
           _DrawerTile(
-            item: _NavItem.settings,
-            isSelected: currentItem == _NavItem.settings,
-            onTap: () => onSelect(_NavItem.settings),
+            item: NavItem.settings,
+            isSelected: currentItem == NavItem.settings,
+            onTap: () => onSelect(NavItem.settings),
           ),
         ],
       ),
@@ -228,11 +198,12 @@ class _AppNavigationDrawer extends StatelessWidget {
 }
 
 class _DrawerTile extends StatelessWidget {
-  final _NavItem item;
+  final NavItem item;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _DrawerTile({
+    super.key,
     required this.item,
     required this.isSelected,
     required this.onTap,
@@ -259,7 +230,9 @@ class _DrawerTile extends StatelessWidget {
         ),
         selected: isSelected,
         selectedTileColor: cs.primary.withValues(alpha: 0.08),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
         dense: true,
         onTap: onTap,
       ),

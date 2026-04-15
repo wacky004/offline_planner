@@ -15,6 +15,10 @@ import '../models/song.dart';
 import '../models/song_adapter.dart';
 import '../models/playlist.dart';
 import '../models/playlist_adapter.dart';
+import '../models/step_entry.dart';
+import '../models/step_entry_adapter.dart';
+import '../models/weight_entry.dart';
+import '../models/weight_entry_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
@@ -26,6 +30,8 @@ class DatabaseService {
   static const String _bibleVersesV2BoxName = 'bibleVersesV2Box';
   static const String _songsBoxName = 'songsBox';
   static const String _playlistsBoxName = 'playlistsBox';
+  static const String _stepEntriesBoxName = 'stepEntriesBox';
+  static const String _weightEntriesBoxName = 'weightEntriesBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
@@ -36,6 +42,8 @@ class DatabaseService {
   late Box<BibleVerse> _bibleVersesBox;
   late Box<Song> _songsBox;
   late Box<Playlist> _playlistsBox;
+  late Box<StepEntry> _stepEntriesBox;
+  late Box<WeightEntry> _weightEntriesBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -49,6 +57,8 @@ class DatabaseService {
     Hive.registerAdapter(BibleVerseAdapter());
     Hive.registerAdapter(SongAdapter());
     Hive.registerAdapter(PlaylistAdapter());
+    Hive.registerAdapter(StepEntryAdapter());
+    Hive.registerAdapter(WeightEntryAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
@@ -60,6 +70,8 @@ class DatabaseService {
     _bibleVersesBox = await Hive.openBox<BibleVerse>(_bibleVersesV2BoxName);
     _songsBox = await Hive.openBox<Song>(_songsBoxName);
     _playlistsBox = await Hive.openBox<Playlist>(_playlistsBoxName);
+    _stepEntriesBox = await Hive.openBox<StepEntry>(_stepEntriesBoxName);
+    _weightEntriesBox = await Hive.openBox<WeightEntry>(_weightEntriesBoxName);
   }
 
   // --- Bible Books --- //
@@ -142,4 +154,16 @@ class DatabaseService {
   Future<void> addPlaylist(Playlist playlist) async => await _playlistsBox.put(playlist.id, playlist);
   Future<void> updatePlaylist(Playlist playlist) async => await _playlistsBox.put(playlist.id, playlist);
   Future<void> deletePlaylist(String id) async => await _playlistsBox.delete(id);
+
+  // --- Step Entries --- //
+  List<StepEntry> getAllStepEntries() => _stepEntriesBox.values.toList();
+  Future<void> addStepEntry(StepEntry entry) async => await _stepEntriesBox.put(entry.id, entry);
+  Future<void> updateStepEntry(StepEntry entry) async => await _stepEntriesBox.put(entry.id, entry);
+  Future<void> deleteStepEntry(String id) async => await _stepEntriesBox.delete(id);
+
+  // --- Weight Entries --- //
+  List<WeightEntry> getAllWeightEntries() => _weightEntriesBox.values.toList();
+  Future<void> addWeightEntry(WeightEntry entry) async => await _weightEntriesBox.put(entry.id, entry);
+  Future<void> updateWeightEntry(WeightEntry entry) async => await _weightEntriesBox.put(entry.id, entry);
+  Future<void> deleteWeightEntry(String id) async => await _weightEntriesBox.delete(id);
 }

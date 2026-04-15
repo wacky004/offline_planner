@@ -6,6 +6,7 @@ import '../providers/cookbook_provider.dart';
 import '../providers/music_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/entry_type.dart';
+import '../widgets/app_drawer.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -18,6 +19,8 @@ class DashboardScreen extends StatelessWidget {
     final now = DateTime.now();
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Dashboard')),
+      drawer: const AppDrawer(),
       body: Consumer3<PlannerProvider, CookbookProvider, MusicProvider>(
         builder: (context, planner, cookbook, music, _) {
           final settings = context.watch<SettingsProvider>();

@@ -150,6 +150,37 @@ class MusicScreen extends StatelessWidget {
                     )
                   ],
                 ),
+                if (playlistSongs.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => reactiveProvider.play(playlistSongs.first, queueContext: playlistSongs),
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Play All'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.shuffle),
+                          color: reactiveProvider.isShuffle ? Theme.of(context).colorScheme.primary : null,
+                          onPressed: () => reactiveProvider.toggleShuffle(),
+                          tooltip: 'Shuffle',
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            reactiveProvider.repeatMode == music.RepeatMode.one 
+                              ? Icons.repeat_one 
+                              : Icons.repeat
+                          ),
+                          color: reactiveProvider.repeatMode != music.RepeatMode.off ? Theme.of(context).colorScheme.primary : null,
+                          onPressed: () => reactiveProvider.cycleRepeatMode(),
+                          tooltip: 'Repeat',
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: playlistSongs.isEmpty 
                   ? const Center(child: Text('Playlist is empty. Add songs from "All Songs".'))
@@ -157,9 +188,20 @@ class MusicScreen extends StatelessWidget {
                     itemCount: playlistSongs.length,
                     itemBuilder: (context, index) {
                        final song = playlistSongs[index];
+                       final isCurrentlyPlaying = reactiveProvider.currentSong?.id == song.id;
                        return ListTile(
-                         leading: const Icon(Icons.music_note),
-                         title: Text(song.title, maxLines: 1),
+                         leading: Icon(
+                           isCurrentlyPlaying ? Icons.volume_up : Icons.music_note,
+                           color: isCurrentlyPlaying ? Theme.of(context).colorScheme.primary : null,
+                         ),
+                         title: Text(
+                           song.title, 
+                           style: TextStyle(
+                             fontWeight: isCurrentlyPlaying ? FontWeight.bold : FontWeight.normal,
+                             color: isCurrentlyPlaying ? Theme.of(context).colorScheme.primary : null,
+                           ),
+                           maxLines: 1,
+                         ),
                          trailing: IconButton(
                            icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
                            onPressed: () => reactiveProvider.removeSongFromPlaylist(pl.id, song.id),
@@ -348,7 +390,7 @@ class MusicScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             IconButton(
-                              icon: Icon(provider.isShuffle ? Icons.shuffle_on : Icons.shuffle),
+                              icon: const Icon(Icons.shuffle),
                               color: provider.isShuffle ? Theme.of(context).colorScheme.primary : null,
                               onPressed: () => provider.toggleShuffle(),
                             ),
@@ -381,8 +423,8 @@ class MusicScreen extends StatelessWidget {
                             IconButton(
                               icon: Icon(
                                 provider.repeatMode == music.RepeatMode.one 
-                                  ? Icons.repeat_one_on 
-                                  : (provider.repeatMode == music.RepeatMode.all ? Icons.repeat_on : Icons.repeat)
+                                  ? Icons.repeat_one 
+                                  : Icons.repeat
                               ),
                               color: provider.repeatMode != music.RepeatMode.off ? Theme.of(context).colorScheme.primary : null,
                               onPressed: () => provider.cycleRepeatMode(),

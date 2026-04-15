@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
-import 'services/pin_service.dart';
 import 'services/auth_service.dart';
 import 'services/sync_service.dart' show SyncService;
 import 'services/backup_service.dart' show BackupService;
@@ -16,9 +15,9 @@ import 'providers/cookbook_provider.dart';
 import 'providers/bible_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/music_provider.dart';
-import 'screens/pin_screen.dart';
+import 'providers/health_provider.dart';
 import 'screens/main_nav.dart';
-import 'screens/mode_selection_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +51,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BibleProvider(dbService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => MusicProvider(dbService)),
+        ChangeNotifierProvider(create: (_) => HealthProvider(dbService)),
         // Auth + Sync (order matters: SyncService depends on AuthService)
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProxyProvider<AuthService, SyncService>(
@@ -93,62 +93,10 @@ class PlannerApp extends StatelessWidget {
             brightness: Brightness.dark,
           ),
           themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const InitialScreenDispatcher(),
+          home: const SplashScreen(),
         );
       },
     );
   }
 }
 
-class InitialScreenDispatcher extends StatefulWidget {
-  const InitialScreenDispatcher({super.key});
-
-  @override
-  State<InitialScreenDispatcher> createState() => _InitialScreenDispatcherState();
-}
-
-class _InitialScreenDispatcherState extends State<InitialScreenDispatcher> {
-  bool _isLoading = true;
-  bool _requiresPin = false;
-  bool _needsModeSelection = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkStatus();
-  }
-
-  Future<void> _checkStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // First-ever launch: no mode chosen yet
-    final userMode = prefs.getString('user_mode');
-    if (userMode == null) {
-      setState(() {
-        _needsModeSelection = true;
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Check if PIN is required
-    final pinService = PinService();
-    final pinEnabled = await pinService.isPinLockEnabled();
-    final hasPin = await pinService.hasPinSetup();
-
-    setState(() {
-      _requiresPin = pinEnabled && hasPin;
-      _isLoading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (_needsModeSelection) return const ModeSelectionScreen();
-    if (_requiresPin) return const PinScreen(isSettingUp: false);
-    return const MainNav();
-  }
-}

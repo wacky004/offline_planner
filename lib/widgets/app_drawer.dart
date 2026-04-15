@@ -6,8 +6,10 @@ import '../screens/goals_screen.dart';
 import '../screens/cookbook_screen.dart';
 import '../screens/bible_screen.dart';
 import '../screens/music_screen.dart';
+import '../screens/health_screen.dart';
 import '../screens/calculator_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/main_nav.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppDrawer
@@ -71,36 +73,53 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
-          _tile(context, Icons.dashboard_rounded, 'Dashboard', const DashboardScreen()),
-          _tile(context, Icons.calendar_month_rounded, 'Planner', const CalendarScreen()),
-          _tile(context, Icons.pie_chart_rounded, 'Summary', const SummaryScreen()),
-          _tile(context, Icons.savings_rounded, 'Goals', const GoalsScreen()),
-          _tile(context, Icons.restaurant_menu_rounded, 'Cookbook', const CookbookScreen()),
-          _tile(context, Icons.menu_book_rounded, 'Bible', const BibleScreen()),
-          _tile(context, Icons.library_music_rounded, 'Music', const MusicScreen()),
-          _tile(context, Icons.calculate_rounded, 'Calculator', const CalculatorScreen()),
+          _tile(context, NavItem.dashboard, const DashboardScreen()),
+          _tile(context, NavItem.calendar, const CalendarScreen()),
+          _tile(context, NavItem.summary, const SummaryScreen()),
+          _tile(context, NavItem.goals, const GoalsScreen()),
+          _tile(context, NavItem.cookbook, const CookbookScreen()),
+          _tile(context, NavItem.bible, const BibleScreen()),
+          _tile(context, NavItem.music, const MusicScreen()),
+          _tile(context, NavItem.health, const HealthScreen()),
+          _tile(context, NavItem.calculator, const CalculatorScreen()),
           const Divider(indent: 16, endIndent: 16),
-          _tile(context, Icons.settings_rounded, 'Settings', const SettingsScreen()),
+          _tile(context, NavItem.settings, const SettingsScreen()),
         ],
       ),
     );
   }
 
-  Widget _tile(BuildContext context, IconData icon, String label, Widget screen) {
+  Widget _tile(BuildContext context, NavItem item, Widget screen) {
     final cs = Theme.of(context).colorScheme;
+    final mainNav = MainNavInherited.maybeOf(context);
+    final isSelected = mainNav?.currentItem == item;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: ListTile(
-        leading: Icon(icon, color: cs.onSurface.withValues(alpha: 0.6), size: 22),
-        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+        leading: Icon(item.icon, color: isSelected ? cs.primary : cs.onSurface.withValues(alpha: 0.6), size: 22),
+        title: Text(
+          item.label, 
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, 
+            color: isSelected ? cs.primary : cs.onSurface,
+            fontSize: 14,
+          ),
+        ),
+        selected: isSelected,
+        selectedTileColor: cs.primary.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         dense: true,
         onTap: () {
           Navigator.pop(context); // close drawer first
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => screen),
-          );
+          if (mainNav != null) {
+            mainNav.navigateTo(item);
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => screen),
+            );
+          }
         },
       ),
     );

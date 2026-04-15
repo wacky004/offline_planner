@@ -220,20 +220,9 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> play(Song song, {List<Song>? queueContext}) async {
+  Future<void> _playDirect(Song song) async {
     final file = File(song.filePath);
-    if (!await file.exists()) {
-      return;
-    }
-    
-    // Set queue context if provided, else default to all songs
-    _originalQueue = queueContext ?? List.from(_songs);
-    _currentQueue = List.from(_originalQueue);
-    if (_isShuffle) {
-      _currentQueue.shuffle();
-      _currentQueue.removeWhere((s) => s.id == song.id);
-      _currentQueue.insert(0, song);
-    }
+    if (!await file.exists()) return;
     
     if (_currentSong?.id != song.id) {
       _currentSong = song;
@@ -243,6 +232,30 @@ class MusicProvider extends ChangeNotifier {
       await _audioPlayer.setSourceDeviceFile(song.filePath);
     }
     await _audioPlayer.resume();
+  }
+
+  Future<void> play(Song song, {List<Song>? queueContext}) async {
+    final file = File(song.filePath);
+    if (!await file.exists()) {
+      return;
+    }
+    
+    // Create explicitly isolated copies so clear() doesn't wipe our DB memory state
+    if (queueContext != null) {
+      _originalQueue = List.from(queueContext);
+    } else {
+      _originalQueue = List.from(_songs);
+    }
+    
+    _currentQueue = List.from(_originalQueue);
+    
+    if (_isShuffle) {
+      _currentQueue.shuffle();
+      _currentQueue.removeWhere((s) => s.id == song.id);
+      _currentQueue.insert(0, song);
+    }
+    
+    await _playDirect(song);
   }
 
   Future<void> pause() async {
@@ -263,10 +276,10 @@ class MusicProvider extends ChangeNotifier {
     int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
     
     if (currentIndex >= 0 && currentIndex < _currentQueue.length - 1) {
-      await play(_currentQueue[currentIndex + 1], queueContext: _originalQueue);
+      await _playDirect(_currentQueue[currentIndex + 1]);
     } else {
       if (_repeatMode == RepeatMode.all || !autoPlay) {
-        await play(_currentQueue.first, queueContext: _originalQueue);
+        await _playDirect(_currentQueue.first);
       } else {
         await stop();
       }
@@ -284,9 +297,9 @@ class MusicProvider extends ChangeNotifier {
     }
     
     if (currentIndex > 0) {
-      await play(_currentQueue[currentIndex - 1], queueContext: _originalQueue);
+      await _playDirect(_currentQueue[currentIndex - 1]);
     } else {
-      await play(_currentQueue.last, queueContext: _originalQueue);
+      await _playDirect(_currentQueue.last);
     }
   }
 

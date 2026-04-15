@@ -5,9 +5,10 @@ import 'package:table_calendar/table_calendar.dart';
 import '../providers/settings_provider.dart';
 import '../services/backup_service.dart';
 import '../services/drive_service.dart';
-import '../services/pin_service.dart';
+import '../services/app_lock_service.dart';
 import '../widgets/app_drawer.dart';
-import 'pin_screen.dart';
+import 'security_setup_screen.dart';
+import 'security_login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,20 +16,19 @@ class SettingsScreen extends StatefulWidget {
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
-
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _pinEnabled = false;
-  final _pinService = PinService();
+  bool _appLockEnabled = false;
+  final _appLockService = AppLockService();
 
   @override
   void initState() {
     super.initState();
-    _loadPinStatus();
+    _loadLockStatus();
   }
 
-  Future<void> _loadPinStatus() async {
-    final enabled = await _pinService.isPinLockEnabled();
-    if (mounted) setState(() => _pinEnabled = enabled);
+  Future<void> _loadLockStatus() async {
+    final enabled = await _appLockService.isAppLockEnabled();
+    if (mounted) setState(() => _appLockEnabled = enabled);
   }
 
   // ─── Confirmation dialog helper ───────────────────────────────────────────
@@ -202,40 +202,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionHeader('Security'),
           SwitchListTile(
             secondary: const Icon(Icons.lock_outline),
-            title: const Text('Enable PIN Lock'),
-            value: _pinEnabled,
+            title: const Text('Enable App Lock'),
+            value: _appLockEnabled,
             onChanged: (val) async {
               if (val) {
-                final hasSetup = await _pinService.hasPinSetup();
+                final hasSetup = await _appLockService.hasCompletedSetup();
                 if (!mounted) return;
                 if (!hasSetup) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const PinScreen(isSettingUp: true)),
-                  ).then((_) => _loadPinStatus());
+                        builder: (_) => const SecuritySetupScreen()),
+                  ).then((_) => _loadLockStatus());
                 } else {
-                  await _pinService.togglePinLock(true);
-                  _loadPinStatus();
+                  await _appLockService.toggleAppLock(true);
+                  _loadLockStatus();
                 }
               } else {
-                await _pinService.togglePinLock(false);
-                _loadPinStatus();
+                // To disable, require authentication first
+                final authSuccess = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const SecurityLoginScreen(isChangingSettings: true)),
+                );
+                if (authSuccess == true) {
+                  await _appLockService.toggleAppLock(false);
+                  _loadLockStatus();
+                }
               }
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.password),
-            title: const Text('Change PIN'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PinScreen(isSettingUp: true)),
-              ).then((_) => _loadPinStatus());
-            },
-          ),
+          if (_appLockEnabled) ...[
+            ListTile(
+              leading: const Icon(Icons.password),
+              title: const Text('Change Login Method / Password'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                 final authSuccess = await Navigator.push<bool>(
+                   context,
+                   MaterialPageRoute(
+                       builder: (_) => const SecurityLoginScreen(isChangingSettings: true)),
+                 );
+                 if (authSuccess == true && mounted) {
+                   Navigator.push(
+                     context,
+                     MaterialPageRoute(
+                         builder: (_) => const SecuritySetupScreen()),
+                   ).then((_) => _loadLockStatus());
+                 }
+              },
+            ),
+          ],
 
           // ── Backup & Sync ─────────────────────────────────────────────────
           _sectionHeader('Backup & Sync'),
