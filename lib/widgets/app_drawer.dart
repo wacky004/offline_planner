@@ -9,6 +9,7 @@ import '../screens/music_screen.dart';
 import '../screens/health_screen.dart';
 import '../screens/calculator_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/document_scanner_screen.dart';
 import '../screens/main_nav.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@ class AppDrawer extends StatelessWidget {
           _tile(context, NavItem.music, const MusicScreen()),
           _tile(context, NavItem.health, const HealthScreen()),
           _tile(context, NavItem.calculator, const CalculatorScreen()),
+          _tile(context, NavItem.documentScanner, const DocumentScannerScreen()),
           const Divider(indent: 16, endIndent: 16),
           _tile(context, NavItem.settings, const SettingsScreen()),
         ],
