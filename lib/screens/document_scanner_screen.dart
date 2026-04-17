@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/scanned_document.dart';
 import '../providers/document_scanner_provider.dart';
 import 'document_viewer_screen.dart';
@@ -18,8 +19,7 @@ class DocumentScannerScreen extends StatefulWidget {
   State<DocumentScannerScreen> createState() => _DocumentScannerScreenState();
 }
 
-class _DocumentScannerScreenState extends State<DocumentScannerScreen>
-    with SingleTickerProviderStateMixin {
+class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
   bool _isScanning = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -67,7 +67,10 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
           _CategoryFilterRow(provider: provider),
           Expanded(
             child: docs.isEmpty
-                ? _EmptyState(isFiltered: provider.selectedCategory != null || provider.searchQuery.isNotEmpty)
+                ? _EmptyState(
+                    isFiltered: provider.selectedCategory != null ||
+                        provider.searchQuery.isNotEmpty,
+                  )
                 : _DocumentGrid(docs: docs),
           ),
         ],
@@ -80,6 +83,8 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
     );
   }
 
+  // ── Scan flow ───────────────────────────────────────────────────────────────
+
   Future<void> _startScan(BuildContext context, {required bool fromCamera}) async {
     if (_isScanning) return;
     setState(() => _isScanning = true);
@@ -89,19 +94,21 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
       final path = await provider.scanDocument(fromCamera: fromCamera);
 
       if (!mounted) return;
+
       if (path == null) {
-        setState(() => _isScanning = false);
+        // null = cancelled OR permission denied → show snackbar
+        _showPermissionDeniedMessage(context, fromCamera: fromCamera);
         return;
       }
 
-      // Prompt for title
+      // Ask user for a title
       final title = await _showTitleDialog(context);
       if (!mounted) return;
 
       final now = DateTime.now();
       final doc = ScannedDocument(
         id: const Uuid().v4(),
-        title: title ?? _generateTitle(now),
+        title: title?.isNotEmpty == true ? title! : _generateTitle(now),
         filePath: path,
         createdAt: now,
         updatedAt: now,
@@ -111,16 +118,43 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
       await provider.addDocument(doc);
 
       if (mounted) {
-        // Open the newly scanned doc
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => DocumentViewerScreen(document: doc),
           ),
         );
       }
+    } catch (e) {
+      debugPrint('[DocScannerScreen] _startScan error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Something went wrong: ${e.toString()}'),
+            backgroundColor: Colors.red[700],
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isScanning = false);
     }
+  }
+
+  void _showPermissionDeniedMessage(BuildContext context, {required bool fromCamera}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          fromCamera
+              ? 'Camera permission is required. Please allow it in Settings.'
+              : 'Photo access is required. Please allow it in Settings.',
+        ),
+        action: SnackBarAction(
+          label: 'Settings',
+          onPressed: openAppSettings,
+        ),
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   Future<String?> _showTitleDialog(BuildContext context) async {
@@ -132,16 +166,16 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
         content: TextField(
           controller: ctrl,
           autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(
-            hintText: 'e.g. Contract, Receipt...',
+            hintText: 'e.g. Contract, Invoice…',
             border: OutlineInputBorder(),
           ),
-          textCapitalization: TextCapitalization.sentences,
           onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
+            onPressed: () => Navigator.of(ctx).pop(''),
             child: const Text('Skip'),
           ),
           FilledButton(
@@ -153,9 +187,8 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
     );
   }
 
-  String _generateTitle(DateTime dt) {
-    return 'Document ${DateFormat('MMM d, yyyy HH:mm').format(dt)}';
-  }
+  String _generateTitle(DateTime dt) =>
+      'Document ${DateFormat('MMM d, yyyy HH:mm').format(dt)}';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,7 +198,6 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen>
 class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-
   const _SearchBar({required this.controller, required this.onChanged});
 
   @override
@@ -195,7 +227,8 @@ class _SearchBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       ),
     );
@@ -220,7 +253,7 @@ class _CategoryFilterRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        itemCount: categories.length + 1, // +1 for "Add" chip
+        itemCount: categories.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == categories.length) {
@@ -257,16 +290,13 @@ class _CategoryFilterRow extends StatelessWidget {
         content: TextField(
           controller: ctrl,
           autofocus: true,
+          textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(
             hintText: 'e.g. Medical, Travel…',
             border: OutlineInputBorder(),
           ),
-          textCapitalization: TextCapitalization.words,
           onSubmitted: (v) {
-            final trimmed = v.trim();
-            if (trimmed.isNotEmpty) {
-              provider.addCustomCategory(trimmed);
-            }
+            if (v.trim().isNotEmpty) provider.addCustomCategory(v.trim());
             Navigator.of(ctx).pop();
           },
         ),
@@ -277,9 +307,8 @@ class _CategoryFilterRow extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () {
-              final trimmed = ctrl.text.trim();
-              if (trimmed.isNotEmpty) {
-                provider.addCustomCategory(trimmed);
+              if (ctrl.text.trim().isNotEmpty) {
+                provider.addCustomCategory(ctrl.text.trim());
               }
               Navigator.of(ctx).pop();
             },
@@ -329,7 +358,11 @@ class _DocumentCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => _openViewer(context),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DocumentViewerScreen(document: doc),
+        ),
+      ),
       child: Card(
         elevation: isDark ? 0 : 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -338,12 +371,7 @@ class _DocumentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail
-            Expanded(
-              child: _DocumentThumbnail(filePath: doc.filePath),
-            ),
-
-            // Info section
+            Expanded(child: _DocumentThumbnail(filePath: doc.filePath)),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -374,9 +402,11 @@ class _DocumentCard extends StatelessWidget {
                       runSpacing: 2,
                       children: doc.categories.take(3).map((c) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: cs.primaryContainer.withValues(alpha: 0.7),
+                            color:
+                                cs.primaryContainer.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -399,14 +429,6 @@ class _DocumentCard extends StatelessWidget {
       ),
     );
   }
-
-  void _openViewer(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DocumentViewerScreen(document: doc),
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -420,14 +442,12 @@ class _DocumentThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final file = File(filePath);
-
     return FutureBuilder<bool>(
-      future: file.exists(),
+      future: File(filePath).exists(),
       builder: (context, snapshot) {
         if (snapshot.data == true) {
           return Image.file(
-            file,
+            File(filePath),
             fit: BoxFit.cover,
             width: double.infinity,
             errorBuilder: (_, __, ___) => _placeholder(cs),
@@ -438,18 +458,16 @@ class _DocumentThumbnail extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(ColorScheme cs) {
-    return Container(
-      color: cs.surfaceContainerHighest,
-      child: Center(
-        child: Icon(
-          Icons.description_rounded,
-          size: 48,
-          color: cs.onSurface.withValues(alpha: 0.3),
+  Widget _placeholder(ColorScheme cs) => Container(
+        color: cs.surfaceContainerHighest,
+        child: Center(
+          child: Icon(
+            Icons.description_rounded,
+            size: 48,
+            color: cs.onSurface.withValues(alpha: 0.3),
+          ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -470,7 +488,9 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isFiltered ? Icons.search_off_rounded : Icons.document_scanner_rounded,
+              isFiltered
+                  ? Icons.search_off_rounded
+                  : Icons.document_scanner_rounded,
               size: 72,
               color: cs.onSurface.withValues(alpha: 0.25),
             ),
@@ -502,7 +522,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Scan FAB (extended with camera / gallery options)
+// Scan FAB
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ScanFAB extends StatelessWidget {
