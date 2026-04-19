@@ -9,6 +9,11 @@ import '../models/recipe_category.dart';
 import '../models/bible_book.dart';
 import '../models/bible_chapter.dart';
 import '../models/bible_verse.dart';
+import '../models/scanned_document.dart';
+import '../models/song.dart';
+import '../models/playlist.dart';
+import '../models/step_entry.dart';
+import '../models/weight_entry.dart';
 import 'database_service.dart';
 import 'auth_service.dart';
 
@@ -118,6 +123,56 @@ class SyncService extends ChangeNotifier {
           addLocal: _dbService.addBibleVerse,
           updateLocal: _dbService.updateBibleVerse,
         ),
+        _syncTable<ScannedDocument>(
+          uid: uid,
+          table: 'scanned_documents',
+          localItems: _dbService.getAllScannedDocuments(),
+          getUpdatedAt: (d) => d.updatedAt,
+          toRow: (d) => _scannedDocumentToRow(d, uid),
+          fromRow: _rowToScannedDocument,
+          addLocal: _dbService.addScannedDocument,
+          updateLocal: _dbService.updateScannedDocument,
+        ),
+        _syncTable<Song>(
+          uid: uid,
+          table: 'songs',
+          localItems: _dbService.getAllSongs(),
+          getUpdatedAt: (s) => s.createdAt, // Songs usually immutable after creation
+          toRow: (s) => _songToRow(s, uid),
+          fromRow: _rowToSong,
+          addLocal: _dbService.addSong,
+          updateLocal: _dbService.updateSong,
+        ),
+        _syncTable<Playlist>(
+          uid: uid,
+          table: 'playlists',
+          localItems: _dbService.getAllPlaylists(),
+          getUpdatedAt: (p) => p.updatedAt,
+          toRow: (p) => _playlistToRow(p, uid),
+          fromRow: _rowToPlaylist,
+          addLocal: _dbService.addPlaylist,
+          updateLocal: _dbService.updatePlaylist,
+        ),
+        _syncTable<StepEntry>(
+          uid: uid,
+          table: 'step_entries',
+          localItems: _dbService.getAllStepEntries(),
+          getUpdatedAt: (s) => s.updatedAt,
+          toRow: (s) => _stepEntryToRow(s, uid),
+          fromRow: _rowToStepEntry,
+          addLocal: _dbService.addStepEntry,
+          updateLocal: _dbService.updateStepEntry,
+        ),
+        _syncTable<WeightEntry>(
+          uid: uid,
+          table: 'weight_entries',
+          localItems: _dbService.getAllWeightEntries(),
+          getUpdatedAt: (w) => w.updatedAt,
+          toRow: (w) => _weightEntryToRow(w, uid),
+          fromRow: _rowToWeightEntry,
+          addLocal: _dbService.addWeightEntry,
+          updateLocal: _dbService.updateWeightEntry,
+        ),
       ]);
     } catch (e) {
       debugPrint('SyncService.syncAll error: $e');
@@ -205,6 +260,7 @@ class SyncService extends ChangeNotifier {
     'reminder_time': e.reminderTime?.toIso8601String(),
     'alarm_sound_id': e.alarmSoundId,
     'updated_at': e.updatedAt.toIso8601String(),
+    'receipt_paths': e.receiptPaths,
   };
 
   Entry _rowToEntry(Map<String, dynamic> r) => Entry(
@@ -221,6 +277,7 @@ class SyncService extends ChangeNotifier {
         : null,
     alarmSoundId: r['alarm_sound_id'] as String?,
     updatedAt: DateTime.parse(r['updated_at'] as String),
+    receiptPaths: List<String>.from(r['receipt_paths'] as List? ?? []),
   );
 
   // ─── Goal ──────────────────────────────────────────────────────────────────
@@ -334,6 +391,111 @@ class SyncService extends ChangeNotifier {
     verseText: r['verse_text'] as String,
     note: r['note'] as String? ?? '',
     isFavorite: r['is_favorite'] as bool? ?? false,
+    createdAt: DateTime.parse(r['created_at'] as String),
+    updatedAt: DateTime.parse(r['updated_at'] as String),
+  );
+
+  // ─── Scanned Document ───────────────────────────────────────────────────────
+
+  Map<String, dynamic> _scannedDocumentToRow(ScannedDocument d, String uid) => {
+    'id': d.id,
+    'user_id': uid,
+    'title': d.title,
+    'file_path': d.filePath,
+    'thumbnail_path': d.thumbnailPath,
+    'categories': d.categories,
+    'notes': d.notes,
+    'created_at': d.createdAt.toIso8601String(),
+    'updated_at': d.updatedAt.toIso8601String(),
+  };
+
+  ScannedDocument _rowToScannedDocument(Map<String, dynamic> r) => ScannedDocument(
+    id: r['id'] as String,
+    title: r['title'] as String,
+    filePath: r['file_path'] as String,
+    thumbnailPath: r['thumbnail_path'] as String?,
+    categories: List<String>.from(r['categories'] as List? ?? []),
+    notes: r['notes'] as String? ?? '',
+    createdAt: DateTime.parse(r['created_at'] as String),
+    updatedAt: DateTime.parse(r['updated_at'] as String),
+  );
+
+  // ─── Song ──────────────────────────────────────────────────────────────────
+
+  Map<String, dynamic> _songToRow(Song s, String uid) => {
+    'id': s.id,
+    'user_id': uid,
+    'title': s.title,
+    'file_path': s.filePath,
+    'duration_ms': s.durationMs,
+    'play_count': s.playCount,
+    'lyrics': s.lyrics,
+    'created_at': s.createdAt.toIso8601String(),
+  };
+
+  Song _rowToSong(Map<String, dynamic> r) => Song(
+    id: r['id'] as String,
+    title: r['title'] as String,
+    filePath: r['file_path'] as String,
+    durationMs: r['duration_ms'] as int?,
+    playCount: r['play_count'] as int? ?? 0,
+    lyrics: r['lyrics'] as String? ?? '',
+    createdAt: DateTime.parse(r['created_at'] as String),
+  );
+
+  // ─── Playlist ──────────────────────────────────────────────────────────────
+
+  Map<String, dynamic> _playlistToRow(Playlist p, String uid) => {
+    'id': p.id,
+    'user_id': uid,
+    'name': p.name,
+    'song_ids': p.songIds,
+    'created_at': p.createdAt.toIso8601String(),
+    'updated_at': p.updatedAt.toIso8601String(),
+  };
+
+  Playlist _rowToPlaylist(Map<String, dynamic> r) => Playlist(
+    id: r['id'] as String,
+    name: r['name'] as String,
+    songIds: List<String>.from(r['song_ids'] as List? ?? []),
+    createdAt: DateTime.parse(r['created_at'] as String),
+    updatedAt: DateTime.parse(r['updated_at'] as String),
+  );
+
+  // ─── Step Entry ─────────────────────────────────────────────────────────────
+
+  Map<String, dynamic> _stepEntryToRow(StepEntry s, String uid) => {
+    'id': s.id,
+    'user_id': uid,
+    'date': s.date.toIso8601String().split('T')[0], // date only
+    'steps': s.steps,
+    'created_at': s.createdAt.toIso8601String(),
+    'updated_at': s.updatedAt.toIso8601String(),
+  };
+
+  StepEntry _rowToStepEntry(Map<String, dynamic> r) => StepEntry(
+    id: r['id'] as String,
+    date: DateTime.parse(r['date'] as String),
+    steps: r['steps'] as int? ?? 0,
+    createdAt: DateTime.parse(r['created_at'] as String),
+    updatedAt: DateTime.parse(r['updated_at'] as String),
+  );
+
+  // ─── Weight Entry ──────────────────────────────────────────────────────────
+
+  Map<String, dynamic> _weightEntryToRow(WeightEntry w, String uid) => {
+    'id': w.id,
+    'user_id': uid,
+    'date': w.date.toIso8601String().split('T')[0], // date only
+    'weight': w.weight,
+    'created_at': w.createdAt.toIso8601String(),
+    'updated_at': w.updatedAt.toIso8601String(),
+  };
+
+  WeightEntry _rowToWeightEntry(Map<String, dynamic> r) => WeightEntry(
+    id: r['id'] as String,
+    weight: (r['weight'] as num).toDouble(),
+    date: DateTime.parse(r['date'] as String),
     createdAt: DateTime.parse(r['created_at'] as String),
     updatedAt: DateTime.parse(r['updated_at'] as String),
   );

@@ -1,58 +1,40 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+/// Legacy ScannerService kept for backward compatibility.
+/// image_cropper has been removed to prevent FileProvider conflicts on Android.
 class ScannerService {
   final ImagePicker _picker = ImagePicker();
 
   Future<String?> scanReceipt({required bool fromCamera}) async {
     try {
       final source = fromCamera ? ImageSource.camera : ImageSource.gallery;
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 90,
+        maxWidth: 2048,
+        maxHeight: 2048,
+      );
       if (image == null) return null;
-
-      CroppedFile? croppedFile;
-      try {
-        croppedFile = await ImageCropper().cropImage(
-          sourcePath: image.path,
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: 'Crop Receipt',
-              toolbarColor: Colors.blueGrey,
-              toolbarWidgetColor: Colors.white,
-              initAspectRatio: CropAspectRatioPreset.original,
-              lockAspectRatio: false,
-            ),
-            IOSUiSettings(
-              title: 'Crop Receipt',
-            ),
-          ],
-        );
-      } catch (e) {
-        debugPrint('Crop error: $e');
-      }
-
-      final finalPath = croppedFile?.path ?? image.path;
 
       // Save locally
       final appDir = await getApplicationDocumentsDirectory();
       final receiptsDir = Directory('${appDir.path}/receipts');
-      if (!await receiptsDir.exists()) {
-        await receiptsDir.create(recursive: true);
+      if (!receiptsDir.existsSync()) {
+        receiptsDir.createSync(recursive: true);
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final ext = p.extension(finalPath).isEmpty ? '.jpg' : p.extension(finalPath);
+      final ext = p.extension(image.path).isEmpty ? '.jpg' : p.extension(image.path);
       final newPath = p.join(receiptsDir.path, 'receipt_$timestamp$ext');
 
-      final savedFile = await File(finalPath).copy(newPath);
+      final savedFile = await File(image.path).copy(newPath);
       return savedFile.path;
-      
     } catch (e) {
-      debugPrint('Error scanning receipt: $e');
+      debugPrint('ScannerService error: $e');
       return null;
     }
   }

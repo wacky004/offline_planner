@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import '../models/scanned_document.dart';
 import '../services/database_service.dart';
-import '../services/document_scanner_service.dart';
+import '../services/camera_capture_service.dart';
 
-/// DocumentScannerProvider manages the list of scanned documents,
-/// category/tag filtering, CRUD, and coordinates with DocumentScannerService.
-class DocumentScannerProvider with ChangeNotifier {
+/// CameraProvider manages the list of scanned documents,
+/// category/tag filtering, CRUD, and coordinates with CameraCaptureService.
+class CameraProvider with ChangeNotifier {
   final DatabaseService _dbService;
-  final DocumentScannerService _scannerService = DocumentScannerService();
+  final CameraCaptureService _scannerService = CameraCaptureService();
 
   List<ScannedDocument> _documents = [];
   String _searchQuery = '';
@@ -27,7 +27,7 @@ class DocumentScannerProvider with ChangeNotifier {
   // Custom user categories stored in provider memory + persisted via DB
   List<String> _customCategories = [];
 
-  DocumentScannerProvider(this._dbService) {
+  CameraProvider(this._dbService) {
     _loadData();
   }
 

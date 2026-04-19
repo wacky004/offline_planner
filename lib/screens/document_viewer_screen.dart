@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/scanned_document.dart';
-import '../providers/document_scanner_provider.dart';
+import '../providers/camera_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DocumentViewerScreen
@@ -36,7 +36,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   }
 
   Future<void> _checkFile() async {
-    final exists = await context.read<DocumentScannerProvider>().fileExists(_doc.filePath);
+    final exists = await context.read<CameraProvider>().fileExists(_doc.filePath);
     if (mounted) setState(() => _fileExists = exists);
   }
 
@@ -157,7 +157,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   }
 
   Future<void> _handleAction(BuildContext context, _ViewerAction action) async {
-    final provider = context.read<DocumentScannerProvider>();
+    final provider = context.read<CameraProvider>();
 
     switch (action) {
       case _ViewerAction.rename:
@@ -244,7 +244,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 
   Future<ScannedDocument?> _showCategoryEditor(
     BuildContext context,
-    DocumentScannerProvider provider,
+    CameraProvider provider,
   ) async {
     final selected = List<String>.from(_doc.categories);
     final allCategories = provider.allCategories;
@@ -381,7 +381,7 @@ class _InfoPanel extends StatelessWidget {
 class _CategoryEditorSheet extends StatefulWidget {
   final List<String> allCategories;
   final List<String> selected;
-  final DocumentScannerProvider provider;
+  final CameraProvider provider;
   final Future<void> Function(List<String>) onSave;
 
   const _CategoryEditorSheet({

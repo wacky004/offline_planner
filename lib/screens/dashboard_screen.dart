@@ -5,6 +5,8 @@ import '../providers/planner_provider.dart';
 import '../providers/cookbook_provider.dart';
 import '../providers/music_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/camera_provider.dart';
+import '../providers/attendance_provider.dart';
 import '../models/entry_type.dart';
 import '../widgets/app_drawer.dart';
 
@@ -829,6 +831,42 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
+              // ────── CAMERA & ATTENDANCE ─────────────────────────────────
+              _SectionTitle(title: 'Camera & Attendance', icon: Icons.camera_alt_rounded),
+              const SizedBox(height: 10),
+              Consumer2<CameraProvider, AttendanceProvider>(
+                builder: (context, camera, attendance, _) {
+                  final totalDocs = camera.documents.length;
+                  final todayAttendance = attendance.getRecordsForDate(DateTime.now()).length;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _MiniStatCard(
+                          label: 'Documents',
+                          value: '$totalDocs',
+                          icon: Icons.camera_alt_rounded,
+                          color: Colors.blue,
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _MiniStatCard(
+                          label: 'Attendance Today',
+                          value: '$todayAttendance',
+                          icon: Icons.fact_check_rounded,
+                          color: Colors.green,
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
           );
         },

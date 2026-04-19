@@ -16,7 +16,8 @@ import 'providers/bible_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/music_provider.dart';
 import 'providers/health_provider.dart';
-import 'providers/document_scanner_provider.dart';
+import 'providers/camera_provider.dart';
+import 'providers/attendance_provider.dart';
 import 'screens/main_nav.dart';
 import 'screens/splash_screen.dart';
 
@@ -53,7 +54,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => MusicProvider(dbService)),
         ChangeNotifierProvider(create: (_) => HealthProvider(dbService)),
-        ChangeNotifierProvider(create: (_) => DocumentScannerProvider(dbService)),
+        ChangeNotifierProvider(create: (_) => CameraProvider(dbService)),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider(dbService)),
         // Auth + Sync (order matters: SyncService depends on AuthService)
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProxyProvider<AuthService, SyncService>(

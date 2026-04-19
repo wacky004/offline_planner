@@ -23,7 +23,8 @@ create table if not exists planner_entries (
   has_reminder  boolean     not null default false,
   reminder_time timestamptz,
   alarm_sound_id text,
-  updated_at    timestamptz not null default now()
+  updated_at    timestamptz not null default now(),
+  receipt_paths text[]      not null default '{}'
 );
 
 alter table planner_entries enable row level security;
@@ -114,4 +115,86 @@ create table if not exists bible_verses (
 alter table bible_verses enable row level security;
 
 create policy "Users manage own bible_verses" on bible_verses
+  for all using (auth.uid() = user_id);
+
+-- ─── scanned_documents ───────────────────────────────────────
+create table if not exists scanned_documents (
+  id             text         primary key,
+  user_id        uuid         not null references auth.users(id) on delete cascade,
+  title          text         not null,
+  file_path      text         not null,
+  thumbnail_path text,
+  categories     text[]       not null default '{}',
+  notes          text         not null default '',
+  created_at     timestamptz  not null default now(),
+  updated_at     timestamptz  not null default now()
+);
+
+alter table scanned_documents enable row level security;
+
+create policy "Users manage own scanned_documents" on scanned_documents
+  for all using (auth.uid() = user_id);
+
+-- ─── songs ──────────────────────────────────────────────────
+create table if not exists songs (
+  id          text        primary key,
+  user_id     uuid        not null references auth.users(id) on delete cascade,
+  title       text        not null,
+  file_path   text        not null,
+  duration_ms integer,
+  play_count  integer     not null default 0,
+  lyrics      text        not null default '',
+  created_at  timestamptz not null default now()
+);
+
+alter table songs enable row level security;
+
+create policy "Users manage own songs" on songs
+  for all using (auth.uid() = user_id);
+
+-- ─── playlists ──────────────────────────────────────────────
+create table if not exists playlists (
+  id         text        primary key,
+  user_id    uuid        not null references auth.users(id) on delete cascade,
+  name       text        not null,
+  song_ids   text[]      not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table playlists enable row level security;
+
+create policy "Users manage own playlists" on playlists
+  for all using (auth.uid() = user_id);
+
+-- ─── step_entries ───────────────────────────────────────────
+create table if not exists step_entries (
+  id         text        primary key,
+  user_id    uuid        not null references auth.users(id) on delete cascade,
+  date       date        not null,
+  steps      integer     not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, date)
+);
+
+alter table step_entries enable row level security;
+
+create policy "Users manage own step_entries" on step_entries
+  for all using (auth.uid() = user_id);
+
+-- ─── weight_entries ─────────────────────────────────────────
+create table if not exists weight_entries (
+  id         text             primary key,
+  user_id    uuid             not null references auth.users(id) on delete cascade,
+  date       date             not null,
+  weight     double precision not null,
+  created_at timestamptz      not null default now(),
+  updated_at timestamptz      not null default now(),
+  unique(user_id, date)
+);
+
+alter table weight_entries enable row level security;
+
+create policy "Users manage own weight_entries" on weight_entries
   for all using (auth.uid() = user_id);

@@ -21,6 +21,10 @@ import '../models/weight_entry.dart';
 import '../models/weight_entry_adapter.dart';
 import '../models/scanned_document.dart';
 import '../models/scanned_document_adapter.dart';
+import '../models/registered_face.dart';
+import '../models/registered_face_adapter.dart';
+import '../models/attendance_record.dart';
+import '../models/attendance_record_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
@@ -35,6 +39,8 @@ class DatabaseService {
   static const String _stepEntriesBoxName = 'stepEntriesBox';
   static const String _weightEntriesBoxName = 'weightEntriesBox';
   static const String _scannedDocsBoxName = 'scannedDocsBox';
+  static const String _registeredFacesBoxName = 'registeredFacesBox';
+  static const String _attendanceRecordsBoxName = 'attendanceRecordsBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
@@ -48,6 +54,8 @@ class DatabaseService {
   late Box<StepEntry> _stepEntriesBox;
   late Box<WeightEntry> _weightEntriesBox;
   late Box<ScannedDocument> _scannedDocsBox;
+  late Box<RegisteredFace> _registeredFacesBox;
+  late Box<AttendanceRecord> _attendanceRecordsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -64,6 +72,8 @@ class DatabaseService {
     Hive.registerAdapter(StepEntryAdapter());
     Hive.registerAdapter(WeightEntryAdapter());
     Hive.registerAdapter(ScannedDocumentAdapter());
+    Hive.registerAdapter(RegisteredFaceAdapter());
+    Hive.registerAdapter(AttendanceRecordAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
@@ -78,6 +88,8 @@ class DatabaseService {
     _stepEntriesBox = await Hive.openBox<StepEntry>(_stepEntriesBoxName);
     _weightEntriesBox = await Hive.openBox<WeightEntry>(_weightEntriesBoxName);
     _scannedDocsBox = await Hive.openBox<ScannedDocument>(_scannedDocsBoxName);
+    _registeredFacesBox = await Hive.openBox<RegisteredFace>(_registeredFacesBoxName);
+    _attendanceRecordsBox = await Hive.openBox<AttendanceRecord>(_attendanceRecordsBoxName);
   }
 
   // --- Bible Books --- //
@@ -178,4 +190,16 @@ class DatabaseService {
   Future<void> addScannedDocument(ScannedDocument doc) async => await _scannedDocsBox.put(doc.id, doc);
   Future<void> updateScannedDocument(ScannedDocument doc) async => await _scannedDocsBox.put(doc.id, doc);
   Future<void> deleteScannedDocument(String id) async => await _scannedDocsBox.delete(id);
+
+  // --- Registered Faces --- //
+  List<RegisteredFace> getAllRegisteredFaces() => _registeredFacesBox.values.toList();
+  Future<void> addRegisteredFace(RegisteredFace face) async => await _registeredFacesBox.put(face.id, face);
+  Future<void> updateRegisteredFace(RegisteredFace face) async => await _registeredFacesBox.put(face.id, face);
+  Future<void> deleteRegisteredFace(String id) async => await _registeredFacesBox.delete(id);
+
+  // --- Attendance Records --- //
+  List<AttendanceRecord> getAllAttendanceRecords() => _attendanceRecordsBox.values.toList();
+  Future<void> addAttendanceRecord(AttendanceRecord record) async => await _attendanceRecordsBox.put(record.id, record);
+  Future<void> updateAttendanceRecord(AttendanceRecord record) async => await _attendanceRecordsBox.put(record.id, record);
+  Future<void> deleteAttendanceRecord(String id) async => await _attendanceRecordsBox.delete(id);
 }

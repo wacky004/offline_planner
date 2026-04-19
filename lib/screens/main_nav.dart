@@ -9,7 +9,7 @@ import 'music_screen.dart';
 import 'calculator_screen.dart';
 import 'health_screen.dart';
 import 'settings_screen.dart';
-import 'document_scanner_screen.dart';
+import 'camera_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MainNav
@@ -36,7 +36,7 @@ enum NavItem {
   music('Music', Icons.library_music_rounded),
   health('Health', Icons.monitor_heart_rounded),
   calculator('Calculator', Icons.calculate_rounded),
-  documentScanner('Doc Scanner', Icons.document_scanner_rounded),
+  camera('Camera', Icons.camera_alt_rounded),
   settings('Settings', Icons.settings_rounded);
 
   final String label;
@@ -67,8 +67,8 @@ class _MainNavState extends State<MainNav> {
         return const HealthScreen();
       case NavItem.calculator:
         return const CalculatorScreen();
-      case NavItem.documentScanner:
-        return const DocumentScannerScreen();
+      case NavItem.camera:
+        return const CameraScreen();
       case NavItem.settings:
         return const SettingsScreen();
     }

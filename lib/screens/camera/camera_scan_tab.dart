@@ -4,24 +4,34 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../models/scanned_document.dart';
-import '../providers/document_scanner_provider.dart';
-import 'document_viewer_screen.dart';
+import '../../models/scanned_document.dart';
+import '../../providers/camera_provider.dart';
+import '../../widgets/app_drawer.dart';
+import '../document_viewer_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DocumentScannerScreen
+// Enums
 // ─────────────────────────────────────────────────────────────────────────────
 
-class DocumentScannerScreen extends StatefulWidget {
-  const DocumentScannerScreen({super.key});
+enum _SortOrder { dateDesc, dateAsc, nameAsc, nameDesc }
+
+enum _MenuAction { sortDateDesc, sortDateAsc, sortNameAsc, sortNameDesc }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CameraScanTab
+// ─────────────────────────────────────────────────────────────────────────────
+
+class CameraScanTab extends StatefulWidget {
+  const CameraScanTab({super.key});
 
   @override
-  State<DocumentScannerScreen> createState() => _DocumentScannerScreenState();
+  State<CameraScanTab> createState() => _CameraScanTabState();
 }
 
-class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
+class _CameraScanTabState extends State<CameraScanTab> {
   bool _isScanning = false;
   final TextEditingController _searchController = TextEditingController();
+  _SortOrder _sortOrder = _SortOrder.dateDesc;
 
   @override
   void dispose() {
@@ -29,35 +39,36 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
     super.dispose();
   }
 
+  List<ScannedDocument> _sortDocs(List<ScannedDocument> docs) {
+    final sorted = List<ScannedDocument>.from(docs);
+    switch (_sortOrder) {
+      case _SortOrder.dateDesc:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case _SortOrder.dateAsc:
+        sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case _SortOrder.nameAsc:
+        sorted.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case _SortOrder.nameDesc:
+        sorted.sort((a, b) => b.title.toLowerCase().compareTo(a.title.toLowerCase()));
+        break;
+    }
+    return sorted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final provider = context.watch<DocumentScannerProvider>();
+    final provider = context.watch<CameraProvider>();
     final docs = provider.filteredDocuments;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      // ── Drawer gives users the hamburger ≡ menu to navigate back ──
+      
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        backgroundColor: isDark ? cs.surfaceContainerHighest : cs.primary,
-        foregroundColor: isDark ? cs.onSurface : Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Document Scanner',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
-        ),
-        actions: [
-          if (provider.selectedCategory != null || provider.searchQuery.isNotEmpty)
-            IconButton(
-              onPressed: () {
-                provider.clearFilters();
-                _searchController.clear();
-              },
-              icon: const Icon(Icons.filter_alt_off_rounded),
-              tooltip: 'Clear Filters',
-            ),
-        ],
-      ),
       body: Column(
         children: [
           _SearchBar(
@@ -71,7 +82,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
                     isFiltered: provider.selectedCategory != null ||
                         provider.searchQuery.isNotEmpty,
                   )
-                : _DocumentGrid(docs: docs),
+                : _DocumentGrid(docs: _sortDocs(docs)),
           ),
         ],
       ),
@@ -83,32 +94,65 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
     );
   }
 
+  // ── Menu handler ─────────────────────────────────────────────────────────────
+
+  void _handleMenuAction(_MenuAction action, CameraProvider provider) {
+    setState(() {
+      switch (action) {
+        case _MenuAction.sortDateDesc:
+          _sortOrder = _SortOrder.dateDesc;
+          break;
+        case _MenuAction.sortDateAsc:
+          _sortOrder = _SortOrder.dateAsc;
+          break;
+        case _MenuAction.sortNameAsc:
+          _sortOrder = _SortOrder.nameAsc;
+          break;
+        case _MenuAction.sortNameDesc:
+          _sortOrder = _SortOrder.nameDesc;
+          break;
+      }
+    });
+  }
+
   // ── Scan flow ───────────────────────────────────────────────────────────────
 
-  Future<void> _startScan(BuildContext context, {required bool fromCamera}) async {
+  Future<void> _startScan(BuildContext context,
+      {required bool fromCamera}) async {
     if (_isScanning) return;
     setState(() => _isScanning = true);
 
     try {
-      final provider = context.read<DocumentScannerProvider>();
+      final provider = context.read<CameraProvider>();
       final path = await provider.scanDocument(fromCamera: fromCamera);
 
       if (!mounted) return;
 
       if (path == null) {
-        // null = cancelled OR permission denied → show snackbar
-        _showPermissionDeniedMessage(context, fromCamera: fromCamera);
+        // Only show permission message for camera; gallery picker handles its own access
+        if (fromCamera) {
+          _showPermissionMessage(context, fromCamera: fromCamera);
+        } else {
+          // Gallery: user likely cancelled — show a gentle snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No image selected.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
         return;
       }
 
-      // Ask user for a title
       final title = await _showTitleDialog(context);
       if (!mounted) return;
 
       final now = DateTime.now();
       final doc = ScannedDocument(
         id: const Uuid().v4(),
-        title: title?.isNotEmpty == true ? title! : _generateTitle(now),
+        title: (title != null && title.isNotEmpty)
+            ? title
+            : _generateTitle(now),
         filePath: path,
         createdAt: now,
         updatedAt: now,
@@ -125,11 +169,11 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         );
       }
     } catch (e) {
-      debugPrint('[DocScannerScreen] _startScan error: $e');
+      debugPrint('[DocScannerScreen] error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Something went wrong: ${e.toString()}'),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red[700],
           ),
         );
@@ -139,17 +183,17 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
     }
   }
 
-  void _showPermissionDeniedMessage(BuildContext context, {required bool fromCamera}) {
+  void _showPermissionMessage(BuildContext context, {required bool fromCamera}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           fromCamera
-              ? 'Camera permission is required. Please allow it in Settings.'
-              : 'Photo access is required. Please allow it in Settings.',
+              ? 'Camera permission denied. Enable it in Settings.'
+              : 'Photo access denied. Enable it in Settings.',
         ),
         action: SnackBarAction(
-          label: 'Settings',
+          label: 'Open Settings',
           onPressed: openAppSettings,
         ),
         duration: const Duration(seconds: 6),
@@ -210,7 +254,8 @@ class _SearchBar extends StatelessWidget {
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: 'Search documents…',
-          hintStyle: TextStyle(color: cs.onSurface.withValues(alpha: 0.5)),
+          hintStyle:
+              TextStyle(color: cs.onSurface.withValues(alpha: 0.5)),
           prefixIcon: Icon(Icons.search_rounded, color: cs.primary),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
@@ -222,7 +267,8 @@ class _SearchBar extends StatelessWidget {
                 )
               : null,
           filled: true,
-          fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          fillColor:
+              cs.surfaceContainerHighest.withValues(alpha: 0.5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -240,7 +286,7 @@ class _SearchBar extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _CategoryFilterRow extends StatelessWidget {
-  final DocumentScannerProvider provider;
+  final CameraProvider provider;
   const _CategoryFilterRow({required this.provider});
 
   @override
@@ -252,13 +298,15 @@ class _CategoryFilterRow extends StatelessWidget {
       height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         itemCount: categories.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == categories.length) {
             return ActionChip(
-              avatar: Icon(Icons.add_rounded, size: 16, color: cs.primary),
+              avatar:
+                  Icon(Icons.add_rounded, size: 16, color: cs.primary),
               label: const Text('New Tag'),
               onPressed: () => _showAddCategoryDialog(context),
             );
@@ -272,8 +320,11 @@ class _CategoryFilterRow extends StatelessWidget {
             selectedColor: cs.primaryContainer,
             checkmarkColor: cs.onPrimaryContainer,
             labelStyle: TextStyle(
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? cs.onPrimaryContainer : cs.onSurface,
+              fontWeight:
+                  isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected
+                  ? cs.onPrimaryContainer
+                  : cs.onSurface,
             ),
           );
         },
@@ -296,7 +347,9 @@ class _CategoryFilterRow extends StatelessWidget {
             border: OutlineInputBorder(),
           ),
           onSubmitted: (v) {
-            if (v.trim().isNotEmpty) provider.addCustomCategory(v.trim());
+            if (v.trim().isNotEmpty) {
+              provider.addCustomCategory(v.trim());
+            }
             Navigator.of(ctx).pop();
           },
         ),
@@ -365,13 +418,15 @@ class _DocumentCard extends StatelessWidget {
       ),
       child: Card(
         elevation: isDark ? 0 : 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         color: cs.surfaceContainerLow,
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _DocumentThumbnail(filePath: doc.filePath)),
+            Expanded(
+                child: _DocumentThumbnail(filePath: doc.filePath)),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -405,8 +460,8 @@ class _DocumentCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color:
-                                cs.primaryContainer.withValues(alpha: 0.7),
+                            color: cs.primaryContainer
+                                .withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
