@@ -10,6 +10,7 @@ import 'calculator_screen.dart';
 import 'health_screen.dart';
 import 'settings_screen.dart';
 import 'camera_screen.dart';
+import '../game/screens/game_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MainNav
@@ -37,6 +38,7 @@ enum NavItem {
   health('Health', Icons.monitor_heart_rounded),
   calculator('Calculator', Icons.calculate_rounded),
   camera('Camera', Icons.camera_alt_rounded),
+  game('Game', Icons.sports_esports_rounded),
   settings('Settings', Icons.settings_rounded);
 
   final String label;
@@ -69,6 +71,8 @@ class _MainNavState extends State<MainNav> {
         return const CalculatorScreen();
       case NavItem.camera:
         return const CameraScreen();
+      case NavItem.game:
+        return const GameScreen();
       case NavItem.settings:
         return const SettingsScreen();
     }

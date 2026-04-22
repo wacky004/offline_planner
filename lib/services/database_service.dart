@@ -25,6 +25,8 @@ import '../models/registered_face.dart';
 import '../models/registered_face_adapter.dart';
 import '../models/attendance_record.dart';
 import '../models/attendance_record_adapter.dart';
+import '../game/models/game_session.dart';
+import '../game/models/game_session_adapter.dart';
 
 class DatabaseService {
   static const String _boxName = 'entriesBox';
@@ -41,6 +43,7 @@ class DatabaseService {
   static const String _scannedDocsBoxName = 'scannedDocsBox';
   static const String _registeredFacesBoxName = 'registeredFacesBox';
   static const String _attendanceRecordsBoxName = 'attendanceRecordsBox';
+  static const String _gameSessionsBoxName = 'gameSessionsBox';
   
   late Box<Entry> _box;
   late Box<Goal> _goalsBox;
@@ -56,6 +59,7 @@ class DatabaseService {
   late Box<ScannedDocument> _scannedDocsBox;
   late Box<RegisteredFace> _registeredFacesBox;
   late Box<AttendanceRecord> _attendanceRecordsBox;
+  late Box<GameSession> _gameSessionsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -74,6 +78,7 @@ class DatabaseService {
     Hive.registerAdapter(ScannedDocumentAdapter());
     Hive.registerAdapter(RegisteredFaceAdapter());
     Hive.registerAdapter(AttendanceRecordAdapter());
+    Hive.registerAdapter(GameSessionAdapter());
     
     _box = await Hive.openBox<Entry>(_boxName);
     _goalsBox = await Hive.openBox<Goal>(_goalsBoxName);
@@ -90,6 +95,7 @@ class DatabaseService {
     _scannedDocsBox = await Hive.openBox<ScannedDocument>(_scannedDocsBoxName);
     _registeredFacesBox = await Hive.openBox<RegisteredFace>(_registeredFacesBoxName);
     _attendanceRecordsBox = await Hive.openBox<AttendanceRecord>(_attendanceRecordsBoxName);
+    _gameSessionsBox = await Hive.openBox<GameSession>(_gameSessionsBoxName);
   }
 
   // --- Bible Books --- //
@@ -202,4 +208,9 @@ class DatabaseService {
   Future<void> addAttendanceRecord(AttendanceRecord record) async => await _attendanceRecordsBox.put(record.id, record);
   Future<void> updateAttendanceRecord(AttendanceRecord record) async => await _attendanceRecordsBox.put(record.id, record);
   Future<void> deleteAttendanceRecord(String id) async => await _attendanceRecordsBox.delete(id);
+
+  // --- Game Sessions --- //
+  List<GameSession> getAllGameSessions() => _gameSessionsBox.values.toList();
+  Future<void> saveGameSession(GameSession session) async => await _gameSessionsBox.put(session.id, session);
+  Future<void> deleteGameSession(String id) async => await _gameSessionsBox.delete(id);
 }
