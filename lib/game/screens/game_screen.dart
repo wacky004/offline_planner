@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/game_provider.dart';
 import '../../widgets/app_drawer.dart';
+import 'gameplay_screen.dart';
 
 class GameScreen extends StatelessWidget {
   const GameScreen({super.key});
@@ -99,9 +100,8 @@ class GameScreen extends StatelessWidget {
             // Play Button
             FilledButton.icon(
               onPressed: () {
-                // TODO: Launch gameplay screen (Phase 2)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gameplay coming in Phase 2!')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GameplayScreen()),
                 );
               },
               icon: const Icon(Icons.play_arrow_rounded, size: 32),
