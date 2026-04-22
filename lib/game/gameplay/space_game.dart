@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'components/player.dart';
 import 'components/enemy.dart';
+import 'components/bullet.dart';
 
 class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
   late Player player;
@@ -54,6 +55,18 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
     if (isGameOver) return;
     isGameOver = true;
     onGameOverCallback();
+  }
+
+  void reset() {
+    isGameOver = false;
+    score = 0;
+    _enemySpawnTimer = 0.0;
+    onScoreChanged(score);
+
+    children.whereType<Enemy>().forEach((e) => e.removeFromParent());
+    children.whereType<Bullet>().forEach((b) => b.removeFromParent());
+
+    player.position = Vector2(size.x / 2, size.y - 60);
   }
 
   @override

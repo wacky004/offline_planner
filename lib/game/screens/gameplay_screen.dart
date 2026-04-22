@@ -15,6 +15,7 @@ class GameplayScreen extends StatefulWidget {
 class _GameplayScreenState extends State<GameplayScreen> {
   late SpaceGame _game;
   int _currentScore = 0;
+  bool _isPaused = false;
 
   @override
   void initState() {
@@ -42,6 +43,26 @@ class _GameplayScreenState extends State<GameplayScreen> {
     );
   }
 
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+      if (_isPaused) {
+        _game.pauseEngine();
+      } else {
+        _game.resumeEngine();
+      }
+    });
+  }
+
+  void _restartGame() {
+    setState(() {
+      _isPaused = false;
+      _currentScore = 0;
+      _game.reset();
+      _game.resumeEngine();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,11 +86,19 @@ class _GameplayScreenState extends State<GameplayScreen> {
             Positioned(
               top: 16,
               right: 16,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause, color: Colors.white),
+                    onPressed: _togglePause,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
               ),
             ),
             Positioned(
@@ -85,6 +114,64 @@ class _GameplayScreenState extends State<GameplayScreen> {
                 ],
               ),
             ),
+            if (_isPaused)
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: Center(
+                  child: Card(
+                    color: Colors.grey.shade900,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 32.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'PAUSED',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          FilledButton.icon(
+                            onPressed: _togglePause,
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Resume'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(200, 50),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _restartGame,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Restart'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(200, 50),
+                              side: const BorderSide(color: Colors.white38),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            icon: const Icon(Icons.exit_to_app, color: Colors.redAccent),
+                            label: const Text('Exit Game', style: TextStyle(color: Colors.redAccent)),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(200, 50),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
