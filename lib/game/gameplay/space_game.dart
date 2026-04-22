@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'components/player.dart';
 import 'components/enemy.dart';
 import 'components/bullet.dart';
+import 'components/boss.dart';
+import 'components/boss_bullet.dart';
 
 enum GameDifficulty { easy, normal }
 
@@ -14,6 +16,8 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
   int score = 0;
   int wave = 1;
   bool isGameOver = false;
+  bool isBossActive = false;
+  int _lastBossWave = 0;
   double _enemySpawnTimer = 0.0;
   final Random _random = Random();
   
@@ -40,6 +44,14 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
     if (isGameOver) return;
     super.update(dt);
 
+    // Check for Boss Spawn (Every 5 waves)
+    if (wave % 5 == 0 && wave != _lastBossWave && !isBossActive) {
+      _spawnBoss();
+      return; // Stop normal spawning logic this frame
+    }
+
+    if (isBossActive) return; // Don't spawn normal enemies during boss fight
+
     _enemySpawnTimer += dt;
     
     // Calculate spawn rate based on difficulty and wave
@@ -65,6 +77,27 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
     add(enemy);
   }
 
+  void _spawnBoss() {
+    isBossActive = true;
+    final int maxHp = difficulty == GameDifficulty.easy ? 10 : 20 + (wave * 2);
+    final boss = Boss(maxHp: maxHp);
+    add(boss);
+  }
+
+  void onBossDefeated() {
+    isBossActive = false;
+    _lastBossWave = wave;
+    score += 500; // Large score reward = 50 coins!
+    onScoreChanged(score);
+
+    // Force wave progression since we defeated the boss
+    int newWave = (score ~/ 100) + 1;
+    if (newWave > wave) {
+      wave = newWave;
+      onWaveChanged(wave);
+    }
+  }
+
   void increaseScore() {
     if (isGameOver) return;
     score += 10;
@@ -86,6 +119,8 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
 
   void reset() {
     isGameOver = false;
+    isBossActive = false;
+    _lastBossWave = 0;
     score = 0;
     wave = 1;
     _enemySpawnTimer = 0.0;
@@ -94,6 +129,8 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
 
     children.whereType<Enemy>().forEach((e) => e.removeFromParent());
     children.whereType<Bullet>().forEach((b) => b.removeFromParent());
+    children.whereType<Boss>().forEach((b) => b.removeFromParent());
+    children.whereType<BossBullet>().forEach((b) => b.removeFromParent());
 
     player.position = Vector2(size.x / 2, size.y - 60);
   }

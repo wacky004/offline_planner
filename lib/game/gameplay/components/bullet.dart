@@ -4,6 +4,7 @@ import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
 import '../space_game.dart';
 import 'enemy.dart';
+import 'boss.dart';
 
 class Bullet extends PositionComponent with HasGameRef<SpaceGame>, CollisionCallbacks {
   static const double bulletSpeed = 400.0;
@@ -30,6 +31,9 @@ class Bullet extends PositionComponent with HasGameRef<SpaceGame>, CollisionCall
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
     if (other is Enemy) {
+      removeFromParent();
+      other.takeHit();
+    } else if (other is Boss) {
       removeFromParent();
       other.takeHit();
     }
