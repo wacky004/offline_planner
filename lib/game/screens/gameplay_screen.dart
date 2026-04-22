@@ -6,7 +6,9 @@ import '../gameplay/space_game.dart';
 import 'game_over_screen.dart';
 
 class GameplayScreen extends StatefulWidget {
-  const GameplayScreen({super.key});
+  final GameDifficulty difficulty;
+
+  const GameplayScreen({super.key, required this.difficulty});
 
   @override
   State<GameplayScreen> createState() => _GameplayScreenState();
@@ -15,15 +17,22 @@ class GameplayScreen extends StatefulWidget {
 class _GameplayScreenState extends State<GameplayScreen> {
   late SpaceGame _game;
   int _currentScore = 0;
+  int _currentWave = 1;
   bool _isPaused = false;
 
   @override
   void initState() {
     super.initState();
     _game = SpaceGame(
+      difficulty: widget.difficulty,
       onScoreChanged: (score) {
         setState(() {
           _currentScore = score;
+        });
+      },
+      onWaveChanged: (wave) {
+        setState(() {
+          _currentWave = wave;
         });
       },
       onGameOverCallback: () async {
@@ -66,6 +75,7 @@ class _GameplayScreenState extends State<GameplayScreen> {
     setState(() {
       _isPaused = false;
       _currentScore = 0;
+      _currentWave = 1;
       _game.reset();
       _game.resumeEngine();
     });
@@ -82,13 +92,26 @@ class _GameplayScreenState extends State<GameplayScreen> {
             Positioned(
               top: 16,
               left: 16,
-              child: Text(
-                'Score: $_currentScore',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Score: $_currentScore',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Wave: $_currentWave',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
             Positioned(

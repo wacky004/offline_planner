@@ -7,10 +7,10 @@ import 'player.dart';
 
 class Enemy extends PositionComponent with HasGameRef<SpaceGame>, CollisionCallbacks {
   static const double enemySize = 30.0;
-  static const double baseSpeed = 100.0;
+  final double speed;
   final Paint _paint = Paint()..color = Colors.redAccent;
 
-  Enemy() : super(size: Vector2.all(enemySize), anchor: Anchor.center);
+  Enemy({required this.speed}) : super(size: Vector2.all(enemySize), anchor: Anchor.center);
 
   @override
   Future<void> onLoad() async {
@@ -20,7 +20,7 @@ class Enemy extends PositionComponent with HasGameRef<SpaceGame>, CollisionCallb
   @override
   void update(double dt) {
     super.update(dt);
-    position.y += baseSpeed * dt;
+    position.y += speed * dt;
 
     if (position.y > gameRef.size.y + size.y) {
       removeFromParent();

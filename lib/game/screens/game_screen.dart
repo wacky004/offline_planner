@@ -3,10 +3,18 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/game_provider.dart';
 import '../../widgets/app_drawer.dart';
+import '../gameplay/space_game.dart';
 import 'gameplay_screen.dart';
 
-class GameScreen extends StatelessWidget {
+class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  GameDifficulty _selectedDifficulty = GameDifficulty.normal;
 
   @override
   Widget build(BuildContext context) {
@@ -97,11 +105,28 @@ class GameScreen extends StatelessWidget {
             
             const Spacer(),
 
+            // Difficulty Selector
+            const Text('Select Difficulty:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SegmentedButton<GameDifficulty>(
+              segments: const [
+                ButtonSegment(value: GameDifficulty.easy, label: Text('Easy')),
+                ButtonSegment(value: GameDifficulty.normal, label: Text('Normal')),
+              ],
+              selected: {_selectedDifficulty},
+              onSelectionChanged: (Set<GameDifficulty> newSelection) {
+                setState(() {
+                  _selectedDifficulty = newSelection.first;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+
             // Play Button
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const GameplayScreen()),
+                  MaterialPageRoute(builder: (_) => GameplayScreen(difficulty: _selectedDifficulty)),
                 );
               },
               icon: const Icon(Icons.play_arrow_rounded, size: 32),
