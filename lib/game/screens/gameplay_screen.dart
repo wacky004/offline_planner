@@ -30,13 +30,21 @@ class _GameplayScreenState extends State<GameplayScreen> {
         final provider = context.read<GameProvider>();
         await provider.updateHighScore(_currentScore);
         
+        final coinsEarned = _currentScore ~/ 10;
+        if (coinsEarned > 0) {
+          await provider.addCoins(coinsEarned);
+        }
+
         // Slight delay to let the user see the collision
         await Future.delayed(const Duration(milliseconds: 500));
         
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => GameOverScreen(score: _currentScore),
+            builder: (_) => GameOverScreen(
+              score: _currentScore,
+              coinsEarned: coinsEarned,
+            ),
           ),
         );
       },
