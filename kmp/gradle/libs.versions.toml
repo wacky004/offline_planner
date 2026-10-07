@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.0.20"
-agp = "8.5.2"
+agp = "8.10.0"
 compose-multiplatform = "1.7.0"
 sqldelight = "2.0.2"
 serialization = "1.7.3"
@@ -21,6 +21,7 @@ media3-session = { module = "androidx.media3:media3-session", version.ref = "med
 health-connect-client = { module = "androidx.health.connect:connect-client", version.ref = "health-connect" }
 
 [plugins]
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }

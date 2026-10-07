@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# KMP rewrite scaffold
+kmp/build/
+kmp/.gradle/
+kmp/*/build/
+kmp/local.properties
+kmp/*.apk
