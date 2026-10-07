@@ -11,7 +11,7 @@ import 'components/boss_bullet.dart';
 
 enum GameDifficulty { easy, normal }
 
-class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
+class SpaceGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   late Player player;
   int score = 0;
   int wave = 1;
@@ -136,11 +136,11 @@ class SpaceGame extends FlameGame with HasCollisionDetection, TapDetector {
   }
 
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent event) {
     if (isGameOver) return;
     // Tapping on left side moves left, right side moves right.
     // Tapping near center shoots.
-    final touchX = info.eventPosition.widget.x;
+    final touchX = event.canvasPosition.x;
     if (touchX < size.x * 0.3) {
       player.moveLeft();
     } else if (touchX > size.x * 0.7) {
