@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'services/database_service.dart';
@@ -12,14 +11,11 @@ import 'services/drive_service.dart' show DriveService;
 
 import 'providers/planner_provider.dart';
 import 'providers/cookbook_provider.dart';
-import 'providers/bible_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/music_provider.dart';
 import 'providers/health_provider.dart';
 import 'providers/camera_provider.dart';
-import 'providers/attendance_provider.dart';
 import 'game/providers/game_provider.dart';
-import 'screens/main_nav.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -51,12 +47,10 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => PlannerProvider(dbService, notifService)),
         ChangeNotifierProvider(create: (_) => CookbookProvider(dbService)),
-        ChangeNotifierProvider(create: (_) => BibleProvider(dbService)),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => MusicProvider(dbService)),
         ChangeNotifierProvider(create: (_) => HealthProvider(dbService)),
         ChangeNotifierProvider(create: (_) => CameraProvider(dbService)),
-        ChangeNotifierProvider(create: (_) => AttendanceProvider(dbService)),
         ChangeNotifierProvider(create: (_) => GameProvider(dbService)),
         // Auth + Sync (order matters: SyncService depends on AuthService)
         ChangeNotifierProvider<AuthService>.value(value: authService),

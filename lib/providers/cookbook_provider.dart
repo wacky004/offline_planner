@@ -20,12 +20,27 @@ class CookbookProvider with ChangeNotifier {
   RecipeCategory? get selectedCategory => _selectedCategory;
   List<String> get selectedTags => _selectedTags;
 
+  bool _showFavoritesOnly = false;
+  bool get showFavoritesOnly => _showFavoritesOnly;
+  void toggleFavoritesOnly() {
+    _showFavoritesOnly = !_showFavoritesOnly;
+    notifyListeners();
+  }
+
   List<Recipe> get filteredRecipes {
+    final q = _searchQuery.trim().toLowerCase();
     return _recipes.where((recipe) {
-      final matchesSearch = recipe.title.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == null || recipe.category == _selectedCategory;
-      final matchesTags = _selectedTags.isEmpty || _selectedTags.every((t) => recipe.tags.contains(t));
-      return matchesSearch && matchesCategory && matchesTags;
+      final matchesSearch = q.isEmpty ||
+          recipe.title.toLowerCase().contains(q) ||
+          recipe.ingredients.toLowerCase().contains(q) ||
+          recipe.tags.any((t) => t.toLowerCase().contains(q)) ||
+          recipe.notes.toLowerCase().contains(q);
+      final matchesCategory =
+          _selectedCategory == null || recipe.category == _selectedCategory;
+      final matchesTags = _selectedTags.isEmpty ||
+          _selectedTags.every((t) => recipe.tags.contains(t));
+      final matchesFav = !_showFavoritesOnly || recipe.isFavorite;
+      return matchesSearch && matchesCategory && matchesTags && matchesFav;
     }).toList();
   }
 
@@ -41,7 +56,7 @@ class CookbookProvider with ChangeNotifier {
   void setSelectedCategory(RecipeCategory? category) {
     if (_selectedCategory != category) {
       _selectedCategory = category;
-      _selectedTags.clear(); // reset tags when changing primary category
+      // Keep selected tags that still exist in the new scope.
       notifyListeners();
     }
   }

@@ -21,10 +21,46 @@ class PlannerProvider with ChangeNotifier {
   List<Goal> get goals => _goals;
   DateTime get selectedDate => _selectedDate;
 
-  List<Entry> get selectedDateEntries => _entries.where((e) =>
-      e.date.year == _selectedDate.year &&
-      e.date.month == _selectedDate.month &&
-      e.date.day == _selectedDate.day).toList();
+  List<Entry> get selectedDateEntries => entriesForDay(_selectedDate);
+
+  static bool isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static DateTime dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  List<Entry> entriesForDay(DateTime day) =>
+      _entries.where((e) => isSameDay(e.date, day)).toList();
+
+  List<Entry> entriesForMonth(int year, int month) => _entries
+      .where((e) => e.date.year == year && e.date.month == month)
+      .toList();
+
+  double totalFor(Iterable<Entry> list) =>
+      list.fold(0.0, (s, e) => s + (e.amount ?? 0));
+
+  List<Entry> overdueUnpaid({DateTime? now}) {
+    final today = dayOnly(now ?? DateTime.now());
+    return _entries
+        .where((e) =>
+            e.type == EntryType.expense &&
+            !e.isCompletedOrPaid &&
+            dayOnly(e.date).isBefore(today))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  List<Entry> upcomingUnpaid({int days = 7, DateTime? now}) {
+    final base = dayOnly(now ?? DateTime.now());
+    final end = base.add(Duration(days: days));
+    return _entries
+        .where((e) {
+          if (e.type != EntryType.expense || e.isCompletedOrPaid) return false;
+          final d = dayOnly(e.date);
+          return !d.isBefore(base) && !d.isAfter(end);
+        })
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
 
   void setSelectedDate(DateTime date) {
     _selectedDate = date;

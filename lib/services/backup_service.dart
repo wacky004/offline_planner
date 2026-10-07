@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/entry.dart';
 import '../models/goal.dart';
 import '../models/recipe.dart';
-import '../models/bible_book.dart';
-import '../models/bible_chapter.dart';
-import '../models/bible_verse.dart';
 import 'database_service.dart';
 import 'drive_service.dart';
 import 'merge_service.dart';
@@ -232,23 +232,140 @@ class BackupService extends ChangeNotifier {
   // Export helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Builds the full structured JSON string of all local data.
+  /// Builds the full structured JSON string of all local data (v3 includes
+  /// songs/playlists/steps/weights/docs + receipt paths for email restore).
   Future<String> exportToJson() async {
     final deviceId = await _deviceId();
     final now = DateTime.now().toIso8601String();
     final payload = {
       'exportedAt': now,
       'deviceId': deviceId,
-      'version': 2,
+      'version': 3,
       'entries': _db.getAllEntries().map(_entryToJson).toList(),
       'goals': _db.getAllGoals().map(_goalToJson).toList(),
       'recipes': _db.getAllRecipes().map(_recipeToJson).toList(),
-      'bibleBooks': _db.getAllBibleBooks().map(_bibleBookToJson).toList(),
-      'bibleChapters':
-          _db.getAllBibleChapters().map(_bibleChapterToJson).toList(),
-      'bibleVerses': _db.getAllBibleVerses().map(_bibleVerseToJson).toList(),
+      'songs': _db.getAllSongs().map(_songToJson).toList(),
+      'playlists': _db.getAllPlaylists().map(_playlistToJson).toList(),
+      'stepEntries': _db.getAllStepEntries().map(_stepToJson).toList(),
+      'weightEntries':
+          _db.getAllWeightEntries().map(_weightToJson).toList(),
+      'scannedDocuments':
+          _db.getAllScannedDocuments().map(_docToJson).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  /// Export ZIP containing backup.json + media/ (mp3, images, receipts).
+  /// Relative paths in JSON (media/<name>) so restore works on new devices.
+  Future<File> exportBackupZip() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+    final zipPath = p.join(dir.path, 'planner_backup_$stamp.zip');
+    final jsonStr = await exportToJson();
+    final payload = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+    final encoder = ZipFileEncoder();
+    encoder.create(zipPath);
+    encoder.addArchiveFile(
+        ArchiveFile('backup.json', jsonStr.length, utf8.encode(jsonStr)));
+
+    var mediaCount = 0;
+    Future<void> addMedia(String? absPath, void Function(String) rewrite) async {
+      if (absPath == null || absPath.isEmpty) return;
+      final f = File(absPath);
+      if (!await f.exists()) return;
+      final name = p.basename(absPath);
+      final arcName = 'media/${mediaCount}_$name';
+      mediaCount++;
+      await encoder.addFile(f, arcName);
+      rewrite(arcName);
+    }
+
+    // Copy mp3s + rewrite song paths in payload copy.
+    final songs = List<Map<String, dynamic>>.from(payload['songs'] ?? []);
+    for (final s in songs) {
+      final abs = s['filePath'] as String?;
+      if (abs != null && abs.isNotEmpty && await File(abs).exists()) {
+        final name = p.basename(abs);
+        final arcName = 'media/${mediaCount}_$name';
+        mediaCount++;
+        await encoder.addFile(File(abs), arcName);
+        s['filePath'] = arcName;
+      }
+    }
+    // Re-encode backup.json with rewritten relative media paths.
+    final fixed = const JsonEncoder.withIndent('  ').convert(payload);
+    // Replace first entry (absolute) with fixed version: easiest is to
+    // add again — ZipFileEncoder overwrites by name on most readers taking last.
+    encoder.addArchiveFile(
+        ArchiveFile('backup.json', fixed.length, utf8.encode(fixed)));
+
+    // Scanned docs, recipe images, receipts.
+    for (final d in _db.getAllScannedDocuments()) {
+      await addMedia(d.filePath, (_) {});
+      if (d.thumbnailPath != null) await addMedia(d.thumbnailPath, (_) {});
+    }
+    for (final r in _db.getAllRecipes()) {
+      await addMedia(r.imagePath, (_) {});
+    }
+    for (final e in _db.getAllEntries()) {
+      for (final rp in e.receiptPaths) {
+        await addMedia(rp, (_) {});
+      }
+    }
+
+    encoder.close();
+    await _persistLastSync();
+    _lastMessage =
+        'ZIP backup exported (${mediaCount} media files). Share via email to restore on new device.';
+    notifyListeners();
+    return File(zipPath);
+  }
+
+  /// Share latest ZIP via email / share sheet.
+  Future<void> shareBackupZip() async {
+    final zip = await exportBackupZip();
+    await Share.shareXFiles([XFile(zip.path)],
+        subject: 'Offline Planner backup',
+        text:
+            'Attach this ZIP to email. On new device: Settings → Import ZIP.');
+  }
+
+  /// Import ZIP (file picker): extract backup.json + media, merge JSON.
+  /// Media files land in app docs/media/; song/doc paths are relative and
+  /// resolved at view time — full relinking is best-effort in v2.
+  Future<bool> importBackupZip() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+      );
+      if (result == null || result.files.single.path == null) return false;
+      final zipFile = File(result.files.single.path!);
+      final bytes = await zipFile.readAsBytes();
+      final archive = ZipDecoder().decodeBytes(bytes);
+      String? jsonStr;
+      final dir = await getApplicationDocumentsDirectory();
+      final mediaDir = Directory(p.join(dir.path, 'media'));
+      if (!await mediaDir.exists()) await mediaDir.create(recursive: true);
+      for (final file in archive) {
+        if (!file.isFile) continue;
+        if (file.name == 'backup.json') {
+          jsonStr = utf8.decode(file.content as List<int>);
+        } else if (file.name.startsWith('media/')) {
+          final out = File(p.join(dir.path, file.name));
+          await out.parent.create(recursive: true);
+          await out.writeAsBytes(file.content as List<int>, flush: true);
+        }
+      }
+      if (jsonStr == null) return false;
+      await MergeService.mergeFromJson(jsonStr, _db);
+      await _saveLocalBackup(jsonStr);
+      return true;
+    } catch (e) {
+      debugPrint('[Backup] Import ZIP error: $e');
+      return false;
+    }
   }
 
   Future<File> _saveLocalBackup(String jsonStr) async {
@@ -318,6 +435,7 @@ class BackupService extends ChangeNotifier {
         'alarmSoundId': e.alarmSoundId,
         'updatedAt': e.updatedAt.toIso8601String(),
         'createdAt': e.date.toIso8601String(),
+        'receiptPaths': e.receiptPaths,
       };
 
   Map<String, dynamic> _goalToJson(Goal g) => {
@@ -343,32 +461,51 @@ class BackupService extends ChangeNotifier {
         'tags': r.tags,
       };
 
-  Map<String, dynamic> _bibleBookToJson(BibleBook b) => {
-        'id': b.id,
-        'name': b.name,
-        'createdAt': b.createdAt.toIso8601String(),
-        'updatedAt': b.updatedAt.toIso8601String(),
+  Map<String, dynamic> _songToJson(dynamic s) => {
+        'id': s.id,
+        'title': s.title,
+        'filePath': s.filePath,
+        'durationMs': s.durationMs,
+        'playCount': s.playCount,
+        'lyrics': s.lyrics,
+        'createdAt': (s.createdAt as DateTime).toIso8601String(),
       };
 
-  Map<String, dynamic> _bibleChapterToJson(BibleChapter c) => {
-        'id': c.id,
-        'bookId': c.bookId,
-        'chapterTitle': c.chapterTitle,
-        'createdAt': c.createdAt.toIso8601String(),
-        'updatedAt': c.updatedAt.toIso8601String(),
+  Map<String, dynamic> _playlistToJson(dynamic pl) => {
+        'id': pl.id,
+        'name': pl.name,
+        'songIds': pl.songIds,
+        'createdAt': (pl.createdAt as DateTime).toIso8601String(),
+        'updatedAt': (pl.updatedAt as DateTime).toIso8601String(),
       };
 
-  Map<String, dynamic> _bibleVerseToJson(BibleVerse v) => {
-        'id': v.id,
-        'bookId': v.bookId,
-        'chapterId': v.chapterId,
-        'verseNumber': v.verseNumber,
-        'verseText': v.verseText,
-        'note': v.note,
-        'isFavorite': v.isFavorite,
-        'createdAt': v.createdAt.toIso8601String(),
-        'updatedAt': v.updatedAt.toIso8601String(),
+  Map<String, dynamic> _stepToJson(dynamic s) => {
+        'id': s.id,
+        'date': (s.date as DateTime).toIso8601String(),
+        'steps': s.steps,
+        'createdAt': (s.createdAt as DateTime).toIso8601String(),
+        'updatedAt': (s.updatedAt as DateTime).toIso8601String(),
       };
+
+  Map<String, dynamic> _weightToJson(dynamic w) => {
+        'id': w.id,
+        'date': (w.date as DateTime).toIso8601String(),
+        'weight': w.weight,
+        'createdAt': (w.createdAt as DateTime).toIso8601String(),
+        'updatedAt': (w.updatedAt as DateTime).toIso8601String(),
+      };
+
+  Map<String, dynamic> _docToJson(dynamic d) => {
+        'id': d.id,
+        'title': d.title,
+        'filePath': d.filePath,
+        'thumbnailPath': d.thumbnailPath,
+        'categories': d.categories,
+        'notes': d.notes,
+        'createdAt': (d.createdAt as DateTime).toIso8601String(),
+        'updatedAt': (d.updatedAt as DateTime).toIso8601String(),
+      };
+
 }
 
 // Kept for backward-compat with any existing references to SyncBackupService

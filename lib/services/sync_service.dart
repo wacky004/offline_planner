@@ -6,9 +6,6 @@ import '../models/entry_type.dart';
 import '../models/goal.dart';
 import '../models/recipe.dart';
 import '../models/recipe_category.dart';
-import '../models/bible_book.dart';
-import '../models/bible_chapter.dart';
-import '../models/bible_verse.dart';
 import '../models/scanned_document.dart';
 import '../models/song.dart';
 import '../models/playlist.dart';
@@ -27,7 +24,7 @@ import 'auth_service.dart';
 ///   3. Remote rows not found locally → pull down and save locally.
 ///
 /// Supabase tables expected (Row Level Security enabled, user_id FK):
-///   planner_entries, goals, recipes, bible_books, bible_chapters, bible_verses
+///   planner_entries, goals, recipes (bible_* retired)
 class SyncService extends ChangeNotifier {
   final SupabaseClient _db = Supabase.instance.client;
   final DatabaseService _dbService;
@@ -92,36 +89,6 @@ class SyncService extends ChangeNotifier {
           fromRow: _rowToRecipe,
           addLocal: _dbService.addRecipe,
           updateLocal: _dbService.updateRecipe,
-        ),
-        _syncTable<BibleBook>(
-          uid: uid,
-          table: 'bible_books',
-          localItems: _dbService.getAllBibleBooks(),
-          getUpdatedAt: (b) => b.updatedAt,
-          toRow: (b) => _bibleBookToRow(b, uid),
-          fromRow: _rowToBibleBook,
-          addLocal: _dbService.addBibleBook,
-          updateLocal: _dbService.updateBibleBook,
-        ),
-        _syncTable<BibleChapter>(
-          uid: uid,
-          table: 'bible_chapters',
-          localItems: _dbService.getAllBibleChapters(),
-          getUpdatedAt: (c) => c.updatedAt,
-          toRow: (c) => _bibleChapterToRow(c, uid),
-          fromRow: _rowToBibleChapter,
-          addLocal: _dbService.addBibleChapter,
-          updateLocal: _dbService.updateBibleChapter,
-        ),
-        _syncTable<BibleVerse>(
-          uid: uid,
-          table: 'bible_verses',
-          localItems: _dbService.getAllBibleVerses(),
-          getUpdatedAt: (v) => v.updatedAt,
-          toRow: (v) => _bibleVerseToRow(v, uid),
-          fromRow: _rowToBibleVerse,
-          addLocal: _dbService.addBibleVerse,
-          updateLocal: _dbService.updateBibleVerse,
         ),
         _syncTable<ScannedDocument>(
           uid: uid,
@@ -330,69 +297,6 @@ class SyncService extends ChangeNotifier {
     updatedAt: DateTime.parse(r['updated_at'] as String),
     imagePath: r['image_path'] as String?,
     tags: List<String>.from(r['tags'] as List? ?? []),
-  );
-
-  // ─── Bible Book ────────────────────────────────────────────────────────────
-
-  Map<String, dynamic> _bibleBookToRow(BibleBook b, String uid) => {
-    'id': b.id,
-    'user_id': uid,
-    'name': b.name,
-    'created_at': b.createdAt.toIso8601String(),
-    'updated_at': b.updatedAt.toIso8601String(),
-  };
-
-  BibleBook _rowToBibleBook(Map<String, dynamic> r) => BibleBook(
-    id: r['id'] as String,
-    name: r['name'] as String,
-    createdAt: DateTime.parse(r['created_at'] as String),
-    updatedAt: DateTime.parse(r['updated_at'] as String),
-  );
-
-  // ─── Bible Chapter ─────────────────────────────────────────────────────────
-
-  Map<String, dynamic> _bibleChapterToRow(BibleChapter c, String uid) => {
-    'id': c.id,
-    'user_id': uid,
-    'book_id': c.bookId,
-    'chapter_title': c.chapterTitle,
-    'created_at': c.createdAt.toIso8601String(),
-    'updated_at': c.updatedAt.toIso8601String(),
-  };
-
-  BibleChapter _rowToBibleChapter(Map<String, dynamic> r) => BibleChapter(
-    id: r['id'] as String,
-    bookId: r['book_id'] as String,
-    chapterTitle: r['chapter_title'] as String,
-    createdAt: DateTime.parse(r['created_at'] as String),
-    updatedAt: DateTime.parse(r['updated_at'] as String),
-  );
-
-  // ─── Bible Verse ───────────────────────────────────────────────────────────
-
-  Map<String, dynamic> _bibleVerseToRow(BibleVerse v, String uid) => {
-    'id': v.id,
-    'user_id': uid,
-    'book_id': v.bookId,
-    'chapter_id': v.chapterId,
-    'verse_number': v.verseNumber,
-    'verse_text': v.verseText,
-    'note': v.note,
-    'is_favorite': v.isFavorite,
-    'created_at': v.createdAt.toIso8601String(),
-    'updated_at': v.updatedAt.toIso8601String(),
-  };
-
-  BibleVerse _rowToBibleVerse(Map<String, dynamic> r) => BibleVerse(
-    id: r['id'] as String,
-    bookId: r['book_id'] as String,
-    chapterId: r['chapter_id'] as String,
-    verseNumber: r['verse_number'] as int,
-    verseText: r['verse_text'] as String,
-    note: r['note'] as String? ?? '',
-    isFavorite: r['is_favorite'] as bool? ?? false,
-    createdAt: DateTime.parse(r['created_at'] as String),
-    updatedAt: DateTime.parse(r['updated_at'] as String),
   );
 
   // ─── Scanned Document ───────────────────────────────────────────────────────

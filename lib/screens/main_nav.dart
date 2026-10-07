@@ -4,9 +4,7 @@ import 'calendar_screen.dart';
 import 'summary_screen.dart';
 import 'goals_screen.dart';
 import 'cookbook_screen.dart';
-import 'bible_screen.dart';
 import 'music_screen.dart';
-import 'calculator_screen.dart';
 import 'health_screen.dart';
 import 'settings_screen.dart';
 import 'camera_screen.dart';
@@ -33,10 +31,8 @@ enum NavItem {
   summary('Summary', Icons.pie_chart_rounded),
   goals('Goals', Icons.savings_rounded),
   cookbook('Cookbook', Icons.restaurant_menu_rounded),
-  bible('Bible', Icons.menu_book_rounded),
   music('Music', Icons.library_music_rounded),
   health('Health', Icons.monitor_heart_rounded),
-  calculator('Calculator', Icons.calculate_rounded),
   camera('Camera', Icons.camera_alt_rounded),
   game('Game', Icons.sports_esports_rounded),
   settings('Settings', Icons.settings_rounded);
@@ -61,14 +57,10 @@ class _MainNavState extends State<MainNav> {
         return const GoalsScreen();
       case NavItem.cookbook:
         return const CookbookScreen();
-      case NavItem.bible:
-        return const BibleScreen();
       case NavItem.music:
         return const MusicScreen();
       case NavItem.health:
         return const HealthScreen();
-      case NavItem.calculator:
-        return const CalculatorScreen();
       case NavItem.camera:
         return const CameraScreen();
       case NavItem.game:

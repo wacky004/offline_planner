@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -71,6 +72,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _showDayDetails(BuildContext context, DateTime selectedDate) {
+    final selectedIds = <String>{};
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -83,38 +85,143 @@ class _CalendarScreenState extends State<CalendarScreen> {
           minChildSize: 0.3,
           maxChildSize: 0.9,
           builder: (context, scrollController) {
-            return Consumer<PlannerProvider>(
-              builder: (context, provider, child) {
-                final dayEntries = provider.entries.where((e) => isSameDay(e.date, selectedDate)).toList();
-                
-                return Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            DateFormat('EEEE, MMM d, yyyy').format(selectedDate),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                return Consumer2<PlannerProvider, SettingsProvider>(
+                  builder: (context, provider, settings, child) {
+                    final dayEntries = provider.entries.where((e) => isSameDay(e.date, selectedDate)).toList();
+                    final expenses = dayEntries.where((e) => e.type == EntryType.expense).toList();
+                    final selected = expenses.where((e) => selectedIds.contains(e.id)).toList();
+                    final selectedTotal = selected.fold(0.0, (s, e) => s + (e.amount ?? 0));
+
+                    return Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          )
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: dayEntries.isEmpty
-                          ? const Center(child: Text('No entries for this day.'))
-                          : _buildDayItemsList(dayEntries, scrollController: scrollController),
-                    ),
-                  ],
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  DateFormat('EEEE, MMM d, yyyy').format(selectedDate),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                ),
+                              ),
+                              if (expenses.isNotEmpty)
+                                TextButton(
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      if (selectedIds.length == expenses.length) {
+                                        selectedIds.clear();
+                                      } else {
+                                        selectedIds
+                                          ..clear()
+                                          ..addAll(expenses.map((e) => e.id));
+                                      }
+                                    });
+                                  },
+                                  child: Text(selectedIds.length == expenses.length ? 'Clear' : 'All'),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.pop(context),
+                              )
+                            ],
+                          ),
+                        ),
+                        if (expenses.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            child: Row(
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.money_off_rounded, size: 16),
+                                  label: const Text('Unpaid only', style: TextStyle(fontSize: 12)),
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      selectedIds
+                                        ..clear()
+                                        ..addAll(expenses.where((e) => !e.isCompletedOrPaid).map((e) => e.id));
+                                    });
+                                  },
+                                ),
+                                const Spacer(),
+                                if (selected.isNotEmpty)
+                                  IconButton(
+                                    tooltip: 'Copy total',
+                                    icon: const Icon(Icons.copy_rounded, size: 18),
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(
+                                          text: '${selected.length} items: ${settings.currencySymbol}${selectedTotal.toStringAsFixed(2)}'));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Total copied')));
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        Expanded(
+                          child: dayEntries.isEmpty
+                              ? const Center(child: Text('No entries for this day.'))
+                              : ListView.builder(
+                                  controller: scrollController,
+                                  itemCount: dayEntries.length,
+                                  itemBuilder: (context, i) {
+                                    final e = dayEntries[i];
+                                    if (e.type != EntryType.expense) {
+                                      return EntryListItem(entry: e);
+                                    }
+                                    final checked = selectedIds.contains(e.id);
+                                    return Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Checkbox(
+                                          value: checked,
+                                          onChanged: (v) {
+                                            setSheetState(() {
+                                              if (v == true) {
+                                                selectedIds.add(e.id);
+                                              } else {
+                                                selectedIds.remove(e.id);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        Expanded(child: EntryListItem(entry: e)),
+                                      ],
+                                    );
+                                  },
+                                ),
+                        ),
+                        if (selected.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${selected.length} selected • ${settings.currencySymbol}${selectedTotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => setSheetState(() => selectedIds.clear()),
+                                  child: const Text('Clear'),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             );

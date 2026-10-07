@@ -139,6 +139,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
         isError: !ok);
   }
 
+  Future<void> _handleExportZip(BackupService service) async {
+    _showSnackBar('⏳ Exporting ZIP with mp3 + photos…');
+    try {
+      final file = await service.exportBackupZip();
+      if (!mounted) return;
+      _showSnackBar('✅ ZIP ready: ${file.path.split('/').last}');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('❌ ZIP export failed: $e', isError: true);
+    }
+  }
+
+  Future<void> _handleShareZip(BackupService service) async {
+    _showSnackBar('⏳ Preparing ZIP to email…');
+    try {
+      await service.shareBackupZip();
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('❌ Share failed: $e', isError: true);
+    }
+  }
+
+  Future<void> _handleImportZip(BackupService service) async {
+    final confirmed = await _showConfirmDialog(
+      'Import ZIP backup',
+      'Pick a planner_backup_*.zip (from email) to restore on this device. Media (mp3/photos) will be extracted to app storage.',
+    );
+    if (!confirmed || !mounted) return;
+    _showSnackBar('⏳ Importing ZIP…');
+    final ok = await service.importBackupZip();
+    if (!mounted) return;
+    _showSnackBar(ok ? '✅ ZIP import complete!' : '❌ ZIP import failed.',
+        isError: !ok);
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -263,6 +298,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onImportFromDrive: () => _handleImportFromDrive(backup),
             onRestoreFromLocal: () => _handleRestoreFromLocal(backup),
             onImportFromFile: () => _handleImportFromFile(backup),
+            onExportZip: () => _handleExportZip(backup),
+            onShareZip: () => _handleShareZip(backup),
+            onImportZip: () => _handleImportZip(backup),
           ),
 
           const SizedBox(height: 32),
@@ -296,6 +334,9 @@ class _SyncBackupCard extends StatelessWidget {
   final VoidCallback onImportFromDrive;
   final VoidCallback onRestoreFromLocal;
   final VoidCallback onImportFromFile;
+  final VoidCallback onExportZip;
+  final VoidCallback onShareZip;
+  final VoidCallback onImportZip;
 
   const _SyncBackupCard({
     required this.service,
@@ -304,6 +345,9 @@ class _SyncBackupCard extends StatelessWidget {
     required this.onImportFromDrive,
     required this.onRestoreFromLocal,
     required this.onImportFromFile,
+    required this.onExportZip,
+    required this.onShareZip,
+    required this.onImportZip,
   });
 
   @override
@@ -487,6 +531,34 @@ class _SyncBackupCard extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SecondaryActionButton(
+                      icon: Icons.folder_zip_rounded,
+                      label: 'ZIP',
+                      onTap: service.isSyncing ? null : onExportZip,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _SecondaryActionButton(
+                      icon: Icons.email_rounded,
+                      label: 'Email ZIP',
+                      onTap: service.isSyncing ? null : onShareZip,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _SecondaryActionButton(
+                      icon: Icons.unarchive_rounded,
+                      label: 'ZIP In',
+                      onTap: service.isSyncing ? null : onImportZip,
+                    ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 12),
 
@@ -495,7 +567,7 @@ class _SyncBackupCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 4,
                 children:
-                    ['Calendar', 'Expenses', 'Goals', 'Cookbook', 'Bible']
+                    ['Calendar', 'Expenses', 'Goals', 'Cookbook', 'Music+Photos in ZIP']
                         .map((label) => _Chip(label))
                         .toList(),
               ),

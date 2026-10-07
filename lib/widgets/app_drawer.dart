@@ -4,10 +4,8 @@ import '../screens/calendar_screen.dart';
 import '../screens/summary_screen.dart';
 import '../screens/goals_screen.dart';
 import '../screens/cookbook_screen.dart';
-import '../screens/bible_screen.dart';
 import '../screens/music_screen.dart';
 import '../screens/health_screen.dart';
-import '../screens/calculator_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/camera_screen.dart';
 import '../game/screens/game_screen.dart';
@@ -80,10 +78,8 @@ class AppDrawer extends StatelessWidget {
           _tile(context, NavItem.summary, const SummaryScreen()),
           _tile(context, NavItem.goals, const GoalsScreen()),
           _tile(context, NavItem.cookbook, const CookbookScreen()),
-          _tile(context, NavItem.bible, const BibleScreen()),
           _tile(context, NavItem.music, const MusicScreen()),
           _tile(context, NavItem.health, const HealthScreen()),
-          _tile(context, NavItem.calculator, const CalculatorScreen()),
           _tile(context, NavItem.camera, const CameraScreen()),
           _tile(context, NavItem.game, const GameScreen()),
           const Divider(indent: 16, endIndent: 16),

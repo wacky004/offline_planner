@@ -6,7 +6,6 @@ import '../providers/cookbook_provider.dart';
 import '../providers/music_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/camera_provider.dart';
-import '../providers/attendance_provider.dart';
 import '../models/entry_type.dart';
 import '../widgets/app_drawer.dart';
 
@@ -72,16 +71,9 @@ class DashboardScreen extends StatelessWidget {
           final todayNotes =
               todayEntries.where((e) => e.type == EntryType.note).length;
 
-          // ── Upcoming unpaid expenses (next 7 days) ─────────────────
-          final next7 = now.add(const Duration(days: 7));
-          final upcomingExpenses = planner.entries
-              .where((e) =>
-                  e.type == EntryType.expense &&
-                  !e.isCompletedOrPaid &&
-                  e.date.isAfter(now.subtract(const Duration(days: 1))) &&
-                  e.date.isBefore(next7))
-              .toList()
-            ..sort((a, b) => a.date.compareTo(b.date));
+          // ── Upcoming + overdue unpaid expenses (calendar-day based) ──
+          final upcomingExpenses = planner.upcomingUnpaid(days: 7, now: now);
+          final overdueExpenses = planner.overdueUnpaid(now: now);
 
           // ── Recent notes ───────────────────────────────────────────
           final recentNotes = planner.entries
@@ -309,6 +301,67 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // ── Overdue expenses ───────────────────────────────────
+              if (overdueExpenses.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  isDark: isDark,
+                  cs: cs,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.warning_rounded,
+                              size: 16, color: Colors.red),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Overdue Unpaid (${overdueExpenses.length})',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...overdueExpenses.take(4).map((e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    e.title,
+                                    style: tt.bodySmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '$sym${(e.amount ?? 0).toStringAsFixed(2)}',
+                                  style: tt.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  DateFormat('MMM d').format(e.date),
+                                  style: tt.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                    color: cs.onSurface
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ],
 
               // ── Upcoming expenses ──────────────────────────────────
               if (upcomingExpenses.isNotEmpty) ...[
@@ -833,13 +886,12 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               const SizedBox(height: 24),
-              // ────── CAMERA & ATTENDANCE ─────────────────────────────────
-              _SectionTitle(title: 'Camera & Attendance', icon: Icons.camera_alt_rounded),
+              // ────── CAMERA ────────────────────────────────────────────
+              _SectionTitle(title: 'Camera', icon: Icons.camera_alt_rounded),
               const SizedBox(height: 10),
-              Consumer2<CameraProvider, AttendanceProvider>(
-                builder: (context, camera, attendance, _) {
+              Consumer<CameraProvider>(
+                builder: (context, camera, _) {
                   final totalDocs = camera.documents.length;
-                  final todayAttendance = attendance.getRecordsForDate(DateTime.now()).length;
                   return Row(
                     children: [
                       Expanded(
@@ -848,17 +900,6 @@ class DashboardScreen extends StatelessWidget {
                           value: '$totalDocs',
                           icon: Icons.camera_alt_rounded,
                           color: Colors.blue,
-                          isDark: isDark,
-                          cs: cs,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _MiniStatCard(
-                          label: 'Attendance Today',
-                          value: '$todayAttendance',
-                          icon: Icons.fact_check_rounded,
-                          color: Colors.green,
                           isDark: isDark,
                           cs: cs,
                         ),

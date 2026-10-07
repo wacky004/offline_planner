@@ -71,44 +71,81 @@ class HealthProvider with ChangeNotifier {
 
   // ─── Pedometer ─────────────────────────────────────────────────────────────
 
+  String? _sensorError;
+  String? get sensorError => _sensorError;
+
   Future<void> _initPedometer() async {
     try {
-      if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-        final status = await Permission.activityRecognition.request();
-        if (status.isDenied || status.isPermanentlyDenied) {
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        var status = await Permission.activityRecognition.status;
+        if (!status.isGranted) {
+          status = await Permission.activityRecognition.request();
+        }
+        if (status.isPermanentlyDenied || status.isRestricted) {
           debugPrint('Activity recognition permission denied.');
           _pedestrianStatus = 'Permission Denied';
+          _sensorError =
+              'Activity permission denied. Enable it in Settings to count steps.';
+          notifyListeners();
+          return;
+        }
+        if (!status.isGranted) {
+          _pedestrianStatus = 'Permission Denied';
+          _sensorError = 'Activity permission is required for step counting.';
           notifyListeners();
           return;
         }
       }
 
+      await _stepCountSub?.cancel();
+      await _pedestrianStatusSub?.cancel();
+      _sensorError = null;
       _stepCountSub = Pedometer.stepCountStream.listen(
         _onStepCount,
         onError: _onStepCountError,
       );
       _pedestrianStatusSub = Pedometer.pedestrianStatusStream.listen(
         _onPedestrianStatus,
-        onError: (e) => debugPrint('Pedestrian status error: $e'),
+        onError: (e) {
+          _sensorError = 'Step sensor unavailable: $e';
+          debugPrint('Pedestrian status error: $e');
+          notifyListeners();
+        },
       );
     } catch (e) {
+      _sensorError = 'Pedometer unavailable on this device: $e';
       debugPrint('Pedometer init failed: $e');
+      notifyListeners();
     }
   }
+
+  /// Retry after user grants permission in Settings.
+  Future<void> retryPedometer() => _initPedometer();
+
+  Future<void> openAppSettingsPage() async => openAppSettings();
+
+  String? _baselineDayKey;
+  String _dayKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   void _onStepCount(StepCount event) {
     if (!_trackingEnabled) return;
 
-    // The pedometer gives cumulative steps since boot.
-    // We track the baseline so we can compute today's delta.
-    if (_sensorBaseline == null) {
+    // Reset baseline on day change — sensor is cumulative since boot.
+    final todayKey = _dayKey(DateTime.now());
+    if (_sensorBaseline == null || _baselineDayKey != todayKey) {
+      final today = _todayEntry;
+      _liveSteps = today?.steps ?? 0;
       _sensorBaseline = event.steps - _liveSteps;
+      _baselineDayKey = todayKey;
     }
 
     final newSteps = event.steps - _sensorBaseline!;
     if (newSteps < 0) {
       // Device rebooted, reset baseline
       _sensorBaseline = event.steps;
+      _baselineDayKey = todayKey;
       return;
     }
 
@@ -118,7 +155,10 @@ class HealthProvider with ChangeNotifier {
   }
 
   void _onStepCountError(dynamic error) {
+    _sensorError =
+        'Step sensor error — unsupported device or permission missing: $error';
     debugPrint('Step count error: $error');
+    notifyListeners();
   }
 
   void _onPedestrianStatus(PedestrianStatus event) {

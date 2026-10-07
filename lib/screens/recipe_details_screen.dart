@@ -166,6 +166,21 @@ class RecipeDetailsScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
+                      if (updatedRecipe.estimatedCost != null)
+                        Row(
+                          children: [
+                            const Icon(Icons.payments_outlined, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Est. cost: ${updatedRecipe.estimatedCost!.toStringAsFixed(2)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
                       // Tags Section
                       Wrap(
                         spacing: 8,

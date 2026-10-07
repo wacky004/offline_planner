@@ -409,7 +409,7 @@ class MusicScreen extends StatelessWidget {
                                     if (provider.isPlaying) {
                                       provider.pause();
                                     } else {
-                                      provider.play(provider.currentSong!);
+                                      provider.resumeCurrent();
                                     }
                                   },
                                 ),

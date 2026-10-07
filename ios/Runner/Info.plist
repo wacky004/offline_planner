@@ -70,5 +70,7 @@
 	<string>This app needs camera access to scan receipts.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs photos access to select existing receipts.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app counts your steps for health tracking.</string>
 </dict>
 </plist>

@@ -36,12 +36,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
       lastDate: DateTime(2100),
       initialDatePickerMode: DatePickerMode.year,
     );
-    if (picked != null && picked.month != _selectedMonth.month || picked?.year != _selectedMonth.year) {
-      if (picked != null) {
-        setState(() {
-          _selectedMonth = DateTime(picked.year, picked.month);
-        });
-      }
+    if (picked != null &&
+        (picked.month != _selectedMonth.month ||
+            picked.year != _selectedMonth.year)) {
+      setState(() {
+        _selectedMonth = DateTime(picked.year, picked.month);
+      });
     }
   }
 
@@ -67,12 +67,20 @@ class _SummaryScreenState extends State<SummaryScreen> {
                   e.date.year == _selectedMonth.year)
               .toList();
 
-          final expenses = entries.where((e) => e.type == EntryType.expense);
-          final paid = expenses.where((e) => e.isCompletedOrPaid).length;
-          final unpaid = expenses.length - paid;
-          final totalExp = expenses.fold(0.0, (sum, e) => sum + (e.amount ?? 0));
+          final expenses = entries.where((e) => e.type == EntryType.expense).toList();
+          final paidCount = expenses.where((e) => e.isCompletedOrPaid).length;
+          final unpaidCount = expenses.length - paidCount;
+          final totalExp = provider.totalFor(expenses);
+          final paidTotal = provider.totalFor(
+              expenses.where((e) => e.isCompletedOrPaid));
+          final unpaidTotal = provider.totalFor(
+              expenses.where((e) => !e.isCompletedOrPaid));
+          final paidProgress =
+              totalExp > 0 ? (paidTotal / totalExp).clamp(0.0, 1.0) : 0.0;
+          final notesCount =
+              entries.where((e) => e.type == EntryType.note).length;
 
-          final tasks = entries.where((e) => e.type == EntryType.todo);
+          final tasks = entries.where((e) => e.type == EntryType.todo).toList();
           final completedTasks = tasks.where((e) => e.isCompletedOrPaid).length;
           final pendingTasks = tasks.length - completedTasks;
 
@@ -143,8 +151,11 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold, fontSize: 18)),
                                     const SizedBox(height: 8),
-                                    Text('Paid count: $paid'),
-                                    Text('Unpaid count: $unpaid'),
+                                    Text('Paid: $paidCount (${settings.currencySymbol}${paidTotal.toStringAsFixed(2)})'),
+                                    Text('Unpaid: $unpaidCount (${settings.currencySymbol}${unpaidTotal.toStringAsFixed(2)})'),
+                                    Text('Notes this month: $notesCount'),
+                                    const SizedBox(height: 8),
+                                    LinearProgressIndicator(value: paidProgress),
                                   ],
                                 ),
                               ),

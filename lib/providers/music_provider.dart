@@ -78,13 +78,13 @@ class MusicProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    _audioPlayer.onPlayerComplete.listen((event) {
+    _audioPlayer.onPlayerComplete.listen((event) async {
       _incrementPlayCount(_currentSong);
-      if (_repeatMode == RepeatMode.one) {
-        seek(Duration.zero);
-        _audioPlayer.resume();
+      if (_repeatMode == RepeatMode.one && _currentSong != null) {
+        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.resume();
       } else {
-        next(autoPlay: true);
+        await next(autoPlay: true);
       }
     });
   }
@@ -220,10 +220,14 @@ class MusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _playDirect(Song song) async {
+  /// Returns false if file is missing (caller should skip).
+  Future<bool> _playDirect(Song song) async {
     final file = File(song.filePath);
-    if (!await file.exists()) return;
-    
+    if (!await file.exists()) {
+      debugPrint('Missing audio file: ${song.filePath}');
+      return false;
+    }
+
     if (_currentSong?.id != song.id) {
       _currentSong = song;
       _position = Duration.zero;
@@ -232,6 +236,15 @@ class MusicProvider extends ChangeNotifier {
       await _audioPlayer.setSourceDeviceFile(song.filePath);
     }
     await _audioPlayer.resume();
+    return true;
+  }
+
+  /// Resume current track without rebuilding queues (fixes play/pause
+  /// button destroying playlist/shuffle context).
+  Future<void> resumeCurrent() async {
+    if (_currentSong == null) return;
+    final ok = await _playDirect(_currentSong!);
+    if (!ok) await next(autoPlay: true);
   }
 
   Future<void> play(Song song, {List<Song>? queueContext}) async {
@@ -272,34 +285,72 @@ class MusicProvider extends ChangeNotifier {
   }
 
   Future<void> next({bool autoPlay = false}) async {
-    if (_currentQueue.isEmpty) return;
-    int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
-    
-    if (currentIndex >= 0 && currentIndex < _currentQueue.length - 1) {
-      await _playDirect(_currentQueue[currentIndex + 1]);
-    } else {
-      if (_repeatMode == RepeatMode.all || !autoPlay) {
-        await _playDirect(_currentQueue.first);
+    if (_currentQueue.isEmpty) {
+      // Rebuild from library so auto-next never silently dies.
+      if (_songs.isNotEmpty) {
+        _originalQueue = List.from(_songs);
+        _currentQueue = List.from(_songs);
       } else {
-        await stop();
+        return;
       }
     }
+    int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
+    // Unknown current (e.g. deleted) -> start from top.
+    if (currentIndex == -1) {
+      final ok = await _playDirect(_currentQueue.first);
+      if (!ok) await _skipMissingForward(0);
+      return;
+    }
+
+    if (currentIndex < _currentQueue.length - 1) {
+      final ok = await _playDirect(_currentQueue[currentIndex + 1]);
+      if (!ok) await _skipMissingForward(currentIndex + 1);
+    } else {
+      // End of queue.
+      if (_repeatMode == RepeatMode.all || !autoPlay) {
+        final ok = await _playDirect(_currentQueue.first);
+        if (!ok) await _skipMissingForward(0);
+      } else {
+        // Keep last track visible, pause at start instead of wiping queues.
+        await _audioPlayer.pause();
+        await _audioPlayer.seek(Duration.zero);
+        _position = Duration.zero;
+        _isPlaying = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Advance past missing files starting after [failedIndex].
+  Future<void> _skipMissingForward(int failedIndex) async {
+    for (int i = failedIndex + 1; i < _currentQueue.length; i++) {
+      if (await _playDirect(_currentQueue[i])) return;
+    }
+    if (_repeatMode == RepeatMode.all) {
+      for (int i = 0; i <= failedIndex && i < _currentQueue.length; i++) {
+        if (await _playDirect(_currentQueue[i])) return;
+      }
+    }
+    await _audioPlayer.pause();
+    notifyListeners();
   }
 
   Future<void> previous() async {
     if (_currentQueue.isEmpty) return;
     int currentIndex = _currentQueue.indexWhere((s) => s.id == _currentSong?.id);
-    
+
     // If past 3 seconds, previous restarts current track
     if (_position.inSeconds > 3 && _currentSong != null) {
       await seek(Duration.zero);
       return;
     }
-    
+
     if (currentIndex > 0) {
       await _playDirect(_currentQueue[currentIndex - 1]);
-    } else {
+    } else if (_repeatMode == RepeatMode.all) {
       await _playDirect(_currentQueue.last);
+    } else {
+      await seek(Duration.zero);
     }
   }
 

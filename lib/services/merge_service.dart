@@ -5,9 +5,6 @@ import '../models/entry_type.dart';
 import '../models/goal.dart';
 import '../models/recipe.dart';
 import '../models/recipe_category.dart';
-import '../models/bible_book.dart';
-import '../models/bible_chapter.dart';
-import '../models/bible_verse.dart';
 import 'database_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,9 +38,7 @@ class MergeService {
     await mergeEntries(List.from(data['entries'] ?? []), db);
     await mergeGoals(List.from(data['goals'] ?? []), db);
     await mergeRecipes(List.from(data['recipes'] ?? []), db);
-    await mergeBibleBooks(List.from(data['bibleBooks'] ?? []), db);
-    await mergeBibleChapters(List.from(data['bibleChapters'] ?? []), db);
-    await mergeBibleVerses(List.from(data['bibleVerses'] ?? []), db);
+    // Bible collections retired — old backups may still contain them; ignore.
   }
 
   // ── Entries ───────────────────────────────────────────────────────────────
@@ -108,69 +103,6 @@ class MergeService {
     }
   }
 
-  // ── Bible Books ───────────────────────────────────────────────────────────
-
-  static Future<void> mergeBibleBooks(
-      List incoming, DatabaseService db) async {
-    final local = {for (final b in db.getAllBibleBooks()) b.id: b};
-    for (final raw in incoming) {
-      final m = raw as Map<String, dynamic>;
-      if (m['isDeleted'] == true) {
-        await db.deleteBibleBook(m['id'] as String);
-        continue;
-      }
-      final remote = _bibleBookFromJson(m);
-      final existing = local[remote.id];
-      if (existing == null) {
-        await db.addBibleBook(remote);
-      } else if (remote.updatedAt.isAfter(existing.updatedAt)) {
-        await db.updateBibleBook(remote);
-      }
-    }
-  }
-
-  // ── Bible Chapters ────────────────────────────────────────────────────────
-
-  static Future<void> mergeBibleChapters(
-      List incoming, DatabaseService db) async {
-    final local = {for (final c in db.getAllBibleChapters()) c.id: c};
-    for (final raw in incoming) {
-      final m = raw as Map<String, dynamic>;
-      if (m['isDeleted'] == true) {
-        await db.deleteBibleChapter(m['id'] as String);
-        continue;
-      }
-      final remote = _bibleChapterFromJson(m);
-      final existing = local[remote.id];
-      if (existing == null) {
-        await db.addBibleChapter(remote);
-      } else if (remote.updatedAt.isAfter(existing.updatedAt)) {
-        await db.updateBibleChapter(remote);
-      }
-    }
-  }
-
-  // ── Bible Verses ──────────────────────────────────────────────────────────
-
-  static Future<void> mergeBibleVerses(
-      List incoming, DatabaseService db) async {
-    final local = {for (final v in db.getAllBibleVerses()) v.id: v};
-    for (final raw in incoming) {
-      final m = raw as Map<String, dynamic>;
-      if (m['isDeleted'] == true) {
-        await db.deleteBibleVerse(m['id'] as String);
-        continue;
-      }
-      final remote = _bibleVerseFromJson(m);
-      final existing = local[remote.id];
-      if (existing == null) {
-        await db.addBibleVerse(remote);
-      } else if (remote.updatedAt.isAfter(existing.updatedAt)) {
-        await db.updateBibleVerse(remote);
-      }
-    }
-  }
-
   // ── JSON deserializers ────────────────────────────────────────────────────
 
   static Entry _entryFromJson(Map<String, dynamic> m) => Entry(
@@ -216,39 +148,5 @@ class MergeService {
             : DateTime.now(),
         imagePath: m['imagePath'] as String?,
         tags: List<String>.from(m['tags'] as List? ?? []),
-      );
-
-  static BibleBook _bibleBookFromJson(Map<String, dynamic> m) => BibleBook(
-        id: m['id'] as String,
-        name: m['name'] as String,
-        createdAt: DateTime.parse(m['createdAt'] as String),
-        updatedAt: m['updatedAt'] != null
-            ? DateTime.parse(m['updatedAt'] as String)
-            : DateTime.now(),
-      );
-
-  static BibleChapter _bibleChapterFromJson(Map<String, dynamic> m) =>
-      BibleChapter(
-        id: m['id'] as String,
-        bookId: m['bookId'] as String,
-        chapterTitle: m['chapterTitle'] as String,
-        createdAt: DateTime.parse(m['createdAt'] as String),
-        updatedAt: m['updatedAt'] != null
-            ? DateTime.parse(m['updatedAt'] as String)
-            : DateTime.now(),
-      );
-
-  static BibleVerse _bibleVerseFromJson(Map<String, dynamic> m) => BibleVerse(
-        id: m['id'] as String,
-        bookId: m['bookId'] as String,
-        chapterId: m['chapterId'] as String,
-        verseNumber: m['verseNumber'] as int,
-        verseText: m['verseText'] as String,
-        note: m['note'] as String? ?? '',
-        isFavorite: m['isFavorite'] as bool? ?? false,
-        createdAt: DateTime.parse(m['createdAt'] as String),
-        updatedAt: m['updatedAt'] != null
-            ? DateTime.parse(m['updatedAt'] as String)
-            : DateTime.now(),
       );
 }
